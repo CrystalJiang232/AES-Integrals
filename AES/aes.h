@@ -1,51 +1,45 @@
-#include<print>
-#include<span>
-#include<array>
-#include<algorithm>
-#include<ranges>
-#include<iostream>
+// aes.hpp
+#pragma once
+#include <array>
+#include <span>
+#include <algorithm>
+#include <ranges>
+#include <stdexcept>
+#include <print>
+#include <expected>
 
-using uc = unsigned char; //explicit narrowing conversion
+using uc = unsigned char;
 
-struct byte
+struct byte 
 {
-    //special member functions
-    explicit constexpr byte(unsigned char _val):value{_val} {}
-    constexpr byte():byte(0){}
+    explicit constexpr byte(unsigned char _val) : value{_val} {}
+    constexpr byte() : byte(0) {}
 
-
+    // Default special member functions
     constexpr byte(const byte&) = default;
     constexpr byte(byte&&) noexcept = default;
-
     constexpr byte& operator=(const byte&) = default;
     constexpr byte& operator=(byte&&) noexcept = default;
-
     constexpr ~byte() = default;
 
+    // Conversion
+    constexpr operator unsigned char() const noexcept { return value; }
 
-    //conversion constructor
-    constexpr operator unsigned char() const noexcept
-    {
-        return value;
-    }
-
-    //friend binary bitwise operators
-    //we only accepted `byte` type for bitwise ^&| for consistency in schematics(bytes for bytes),which deals no issues in s_box functions
-    //yet considering the prevalence of shifting like x >> 1 in coding, it makes no sense for the explicit to block it
-    //so we choose to give the function signature as `unsigned char` and allowed implicit conversion from byte object to unsigned char(but not vice versa)
-
-
-    //Argument list philosophy:
-    //Since struct `byte` is extremely light-weight and trivial, thus we shall use pass by value rather than reference to conserve the de-reference cost. 
-
-    friend constexpr byte operator^(byte x, byte y) noexcept
-    {
-        return byte{ uc(x.value ^ y.value) };
-    }
-
+    // Bitwise operators
     friend constexpr byte operator&(byte x, byte y) noexcept
     {
         return byte{ uc(x.value & y.value) };
+    }
+
+    // Compound assignments
+    constexpr byte& operator^=(byte right) noexcept
+    {
+        value ^= right.value;
+        return *this;
+    }
+    friend constexpr byte operator^(byte x, byte y) noexcept
+    {
+        return byte{ uc(x.value ^ y.value) };
     }
 
     friend constexpr byte operator|(byte x, byte y) noexcept
@@ -62,13 +56,9 @@ struct byte
     {
         return byte{ uc(x.value << y) };
     }
-    
+
     //compound assignment operators
-    constexpr byte& operator^=(byte right) noexcept
-    {
-        value ^= right.value;
-        return *this;
-    }
+
 
     constexpr byte& operator&=(byte right) noexcept
     {
@@ -91,24 +81,26 @@ struct byte
     constexpr byte& operator<<=(unsigned char shift) noexcept
     {
         value <<= shift;
-        value &= 0xff; //?
+        value &= 0xff;
         return *this;
     }
 
-    //comparison operator(default)
+    // Comparison
     friend constexpr auto operator<=>(const byte&, const byte&) noexcept = default;
 
-    friend constexpr byte operator"" _t(unsigned long long) noexcept;
-    //data member
+    // Literal operator
+    friend constexpr byte operator""_t(unsigned long long) noexcept;
+
     unsigned char value;
 };
 
-constexpr byte operator""_t(unsigned long long _val) noexcept
+// Literal operator (defined in header)
+constexpr byte operator""_t(unsigned long long _val) noexcept 
 {
     return byte{ _val & 0xff };
 }
 
-namespace _gmul
+namespace _gmul 
 {
     using table_t = std::array<byte, 2048>;
     constexpr byte gmul_fn(byte a, uc b) noexcept
@@ -160,10 +152,10 @@ namespace _gmul
 }
 
 using _gmul::gmul;
-
 using block = std::array<byte, 16>;
 using block_vw = std::span<byte, 16>;
 using block_rvw = std::span<const byte, 16>;
+
 
 template<size_t Rounds = 10> requires (Rounds >= 1)
 //constexpr size_t Rounds = 10;
@@ -175,7 +167,7 @@ public:
     static constexpr auto iota_word = std::views::iota(0, 4);
 
 
-    constexpr AES(block_rvw key):rnd_keys(key_expansion(key)){}
+    constexpr AES(block_rvw key) :rnd_keys(key_expansion(key)) {}
 
     constexpr block encrypt(block_rvw plain)
     {
@@ -188,12 +180,12 @@ public:
 
         add_round_key(state, 0);
 
-        for (int i : std::views::iota(1ull,Rounds))
+        for (auto i : std::views::iota(1ull, Rounds))
         {
             sub_bytes(state);
             shift_rows(state);
             mix_columns(state);
-            add_round_key(state,i);
+            add_round_key(state, i);
         }
 
         sub_bytes(state);
@@ -215,7 +207,7 @@ public:
         add_round_key(state, Rounds);
         inv_shift_rows(state);
         inv_sub_bytes(state);
-        
+
         for (int i : std::views::iota(1ull, Rounds) | std::views::reverse)
         {
             add_round_key(state, i);
@@ -279,7 +271,7 @@ private:
         rnd_key_t rk{};
         std::ranges::copy(init, rk[0].begin());
 
-        for (int i : std::views::iota(1ull, Rounds + 1))
+        for (auto i : std::views::iota(1ull, Rounds + 1))
         {
             block_rvw prv = rk[i - 1];
             block_vw cur = rk[i]; //seperating to make read-only sematic more explicit
@@ -296,7 +288,7 @@ private:
                 cur[j] = prv[j] ^ cur[j - 4];
             }
         }
-        
+
         return rk;
     }
 
@@ -307,7 +299,7 @@ private:
             i = s_box[i];
         }
     }
-    
+
     static constexpr void inv_sub_bytes(block_vw s) noexcept
     {
         for (byte& i : s)
@@ -318,12 +310,12 @@ private:
 
     static constexpr void shift_rows(block_vw s) noexcept
     {
-         std::ranges::copy(block{
-            s[0], s[5], s[10], s[15],
-            s[4], s[9], s[14], s[3],
-            s[8], s[13], s[2], s[7],
-            s[12], s[1], s[6], s[11]
-             }, s.begin());
+        std::ranges::copy(block{
+           s[0], s[5], s[10], s[15],
+           s[4], s[9], s[14], s[3],
+           s[8], s[13], s[2], s[7],
+           s[12], s[1], s[6], s[11]
+            }, s.begin());
     }
 
     static constexpr void inv_shift_rows(block_vw s) noexcept
@@ -371,19 +363,19 @@ private:
 
         std::ranges::copy(res, s.begin());
     }
-    
+
     static constexpr void bytes_xor(block_vw to, block_rvw other) noexcept
     {
-        for (auto&& [x,y] : std::views::zip(to,other))
+        for (auto&& [x, y] : std::views::zip(to, other))
         {
             x ^= y;
         }
     }
-    
+
     static constexpr block bytes_xor_ret(block_rvw x, block_rvw y) noexcept
     {
         block res{};
-        for (int i : std::views::iota(0,16))
+        for (int i : std::views::iota(0, 16))
         {
             res[i] = x[i] ^ y[i];
         }
@@ -394,19 +386,13 @@ private:
     {
         if (index < 0 || index > Rounds)
         {
-            throw std::exception{ std::format("Invalid round key index {}: Should be in range(0,{})",index,Rounds).c_str()};
+            throw std::exception{ std::format("Invalid round key index {}: Should be in range(0,{})",index,Rounds).c_str() };
         }
         bytes_xor(block, rnd_keys[index]);
     }
 
     rnd_key_t rnd_keys;
 };
-
-//Practice record:
-
-//1. Be proactive on using aliases in class templates(so as to maintain code consistency),e.g. rnd_key_t
-//2. Use concept constraint on wherever you don't wish something bad to occur,e.g. requires Rounds >= 1 && Rounds <= 16
-
 
 template<>
 struct std::formatter<block_rvw>
@@ -425,17 +411,31 @@ struct std::formatter<block_rvw>
 };
 
 template<>
-struct std::formatter<block> : std::formatter<block_rvw>{};
+struct std::formatter<block> : std::formatter<block_rvw> {};
 
-std::ostream& operator<<(std::ostream& out, byte b)
+constexpr std::expected<block,std::string> block_fromhex(std::string_view sv)
 {
-    return out << std::format("{:02x}", b.value);
-}
+    auto refloc = sv.data();
+    block res{};    
+    for (auto& bt : res)
+    {
+        uc temp{};
+        if (sv.empty())
+        {
+            break;
+        }
+        
 
-std::istream& operator>>(std::istream& in, byte& b)
-{
-    int temp{};
-    in >> temp;
-    b.value = uc(temp & 0xff);
-    return in;
+        if (auto val = std::from_chars(sv.data(), sv.data() + 2, temp, 16);val.ptr != sv.data() + 2)
+        {
+            return std::unexpected{ std::format("Non-hex character at position {}",val.ptr - refloc) };
+        }
+
+        bt = byte{ temp };
+        auto fn = [](char ch) -> bool {return std::isblank(ch);};
+        sv.remove_prefix(2);
+        sv = sv.substr(std::ranges::find_if_not(sv, fn) - sv.begin());
+    }
+
+    return res;
 }
