@@ -1,5 +1,5 @@
-// aes.hpp
 #pragma once
+
 #include <array>
 #include <span>
 #include <algorithm>
@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <print>
 #include <expected>
+#include <vector>
 
 using uc = unsigned char;
 
@@ -94,6 +95,10 @@ struct byte
     unsigned char value;
 };
 
+template<>
+struct std::hash<byte> : std::hash<unsigned char>{};
+
+
 // Literal operator (defined in header)
 constexpr byte operator""_t(unsigned long long _val) noexcept 
 {
@@ -157,16 +162,13 @@ using block_vw = std::span<byte, 16>;
 using block_rvw = std::span<const byte, 16>;
 
 
+
 template<size_t Rounds = 10> requires (Rounds >= 1)
 //constexpr size_t Rounds = 10;
 class AES
 {
 public:
     using rnd_key_t = std::array<block, Rounds + 1>;
-
-    static constexpr auto iota_word = std::views::iota(0, 4);
-
-
     constexpr AES(block_rvw key) :rnd_keys(key_expansion(key)) {}
 
     constexpr block encrypt(block_rvw plain)
@@ -218,6 +220,11 @@ public:
 
         add_round_key(state, 0);
         return state;
+    }
+
+    constexpr block output_rk4() const noexcept
+    {
+        return rnd_keys[4];
     }
 
 private:
@@ -318,6 +325,13 @@ private:
             }, s.begin());
     }
 
+    static constexpr uc shift_rows_idx[] = {
+        0,5,10,15,
+        4,9,14,3,
+        8,13,2,7,
+        12,1,6,11
+    };
+
     static constexpr void inv_shift_rows(block_vw s) noexcept
     {
         std::ranges::copy(block{
@@ -327,6 +341,13 @@ private:
             s[12], s[9], s[6], s[3]
             }, s.begin());
     }
+
+    static constexpr uc inv_shift_rows_idx[] = {
+        0,13,10,7,
+        4,1,14,11,
+        8,5,2,15,
+        12,9,6,3
+    };
 
     static constexpr void mix_columns(block_vw s) noexcept
     {
@@ -391,8 +412,28 @@ private:
         bytes_xor(block, rnd_keys[index]);
     }
 
+    static constexpr auto iota_word = std::views::iota(0, 4);
+    static constexpr auto iota_byte = std::views::iota(0, 256) | std::views::transform([](int x) {return byte(x);});
+
     rnd_key_t rnd_keys;
 };
+
+
+
+template<>
+struct std::formatter<::byte>
+{
+    constexpr auto parse(std::format_parse_context& fpc)
+    {
+        return fpc.begin();
+    }
+
+    auto format(::byte b, std::format_context& fc) const
+    {
+        return std::format_to(fc.out(), "{:02x}", b.value);
+    }
+};
+
 
 template<>
 struct std::formatter<block_rvw>
