@@ -96,4 +96,9 @@ struct Attack_Interface
         8,5,2,15,
         12,9,6,3
     };
+
+    static constexpr byte r_con[] =
+    {
+        0x01_t, 0x02_t, 0x04_t, 0x08_t, 0x10_t, 0x20_t, 0x40_t, 0x80_t, 0x1b_t, 0x36_t
+    };
 };

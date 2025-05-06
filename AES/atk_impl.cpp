@@ -1,6 +1,7 @@
 #include "atk4_1.h"
 #include "atk4_2.h"
 #include "timer.h"
+#include <future>
 
 namespace atk4_1
 {
@@ -41,33 +42,27 @@ namespace atk4_1
 
 namespace atk4_2
 {
-    void atk4_2::Attack::single_thread(int idx,cipher_group_rvw v)
+    void atk4_2::Attack::single_thread(int idx,cipher_group_rvw v,int init)
     {
         Func_Timer t{};
         auto iota_byte = Attack_Interface::iota_byte;
-        auto key_rng = std::views::cartesian_product(iota_byte, iota_byte, iota_byte, iota_byte)
+        auto key_rng = std::views::cartesian_product(iota_byte | std::views::drop(init) | std::views::take(64), iota_byte, iota_byte, iota_byte)
             | std::views::transform([](auto&& x) {auto&& [a, b, c, d] = x; return word{ a,b,c,d };});
 
-        for (word ky : key_rng | std::views::take(0x100000))
+        for (word ky : key_rng)
         {
             if (verify(ky, v))
             {
                 std::println("Group {} key resolved = {}", idx, ky);
                 break;
             }
-
         }
-
         std::print("Thread {} execution complete with t = ", idx);
     }
 
     void atk4_2::Attack::solve()
     {
         //Probability
-
-
-
-        //Solution
         
 
         //Process ciphertexts
@@ -84,16 +79,18 @@ namespace atk4_2
             }
         }
 
-        //4 threads
-        std::array<std::jthread, 4> jt{};
-        for (auto i : iota_word)
-        {
-            jt[i] = std::jthread{ single_thread,i ,total[i]};
-        }
+        //multi-threads
 
-       
+        constexpr int thread_count = 16;
+
+        std::array<std::jthread, thread_count> jt{};
+        for (auto i : std::views::iota(0,thread_count))
+        {
+            jt[i] = std::jthread{ single_thread,i ,total[i / 4],(i % 4) * 64 };
+        }
         std::println("Thread execution started...");
-        
+
+        //Check status every second to see if a thread has already cracked the key(in terms of identical colouring)?
 
     }
 

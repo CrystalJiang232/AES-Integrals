@@ -1,10 +1,27 @@
 #pragma once
 #include "atkinterface.h"
 #include <thread>
-#include <map>
 
 namespace atk4_2
 {
+
+    static constexpr byte gdb_fn(byte b) noexcept
+    {
+        return byte((b & 0x80) ? (((b << 1) ^ 0x1B) & 0xFF) : (b << 1));
+    }
+
+    static consteval std::array<byte, 256> gdb_gen() noexcept
+    {
+        std::array<byte, 256> ret{};
+        for (byte i : Attack_Interface::iota_byte)
+        {
+            ret[i] = gdb_fn(i);
+        }
+        return ret;
+    }
+
+    static constexpr std::array<byte, 256> gdb = gdb_gen();
+
 	class Attack
 	{
     public:
@@ -36,14 +53,14 @@ namespace atk4_2
 
         static constexpr int mix[] =
         {
-            0,7,10,13,
-            1,4,11,14,
-            2,5,8,15,
-            3,6,9,12
+            0,13,10,7,
+            4,1,14,11,
+            8,5,2,15,
+            12,9,6,3
         };
 
         
-        static void single_thread(int,cipher_group_rvw); //Single thread execution
+        static void single_thread(int,cipher_group_rvw,int); //Single thread execution
         void solve();
     private:
 
@@ -85,14 +102,9 @@ namespace atk4_2
             }
         }
 
-        static constexpr byte gdb(byte b) noexcept
-        {
-            return byte((b & 0x80) ? (((b << 1) ^ 0x1B) & 0xFF) : (b << 1));
-        }
-
         static constexpr void inv_mix_columns(word_vw buf) noexcept
         {
-            byte u = gdb(gdb(buf[0] ^ buf[2])), v = gdb(gdb(buf[1] ^ buf[3]));
+            byte u = gdb[gdb[buf[0] ^ buf[2]]], v = gdb[gdb[buf[1] ^ buf[3]]];
             buf[0] ^= u;
             buf[1] ^= v;
             buf[2] ^= u;
@@ -100,15 +112,16 @@ namespace atk4_2
             // mix single column
             byte t = buf[0] ^ buf[1] ^ buf[2] ^ buf[3];
             u = buf[0];
-            buf[0] ^= t ^ gdb(buf[0] ^ buf[1]);
-            buf[1] ^= t ^ gdb(buf[1] ^ buf[2]);
-            buf[2] ^= t ^ gdb(buf[2] ^ buf[3]);
-            buf[3] ^= t ^ gdb(buf[3] ^ u);
+            buf[0] ^= t ^ gdb[buf[0] ^ buf[1]];
+            buf[1] ^= t ^ gdb[buf[1] ^ buf[2]];
+            buf[2] ^= t ^ gdb[buf[2] ^ buf[3]];
+            buf[3] ^= t ^ gdb[buf[3] ^ u];
         }
 
         static constexpr bool verify(word partial_key,cipher_group_rvw vws) noexcept //vws is the pre-processed(shift-row completed) ciphertext "identical-color" 4s
         {
-            using check_map = std::multimap<int, byte>;
+            //using check_map = std::multimap<int, byte>;
+            using check_map = std::array<bool, 1024>;
             check_map mp{};
 
             for (word vw : vws)
@@ -118,22 +131,45 @@ namespace atk4_2
                 inv_mix_columns(vw);
                 for (auto idx : iota_word)
                 {
-                    if (std::ranges::contains(mp, std::pair{ idx,vw[idx] }))
+                    if (auto& position = mp[idx * 256 + vw[idx]];position)
                     {
                         return false;
                     }
                     else
                     {
-                        mp.insert({ idx,vw[idx] });
+                        position = true;
                     }
                 }
             }
             return true;
         }
 
+        public:
+        static constexpr bool debug_assert() noexcept
+        {
+            block key{};
+            auto aes = AES<4>{ key };
+            cipher_group temp{};
+
+            auto k4 = aes.output_rk4();
+            auto translate = word{ k4[0],k4[13],k4[10],k4[7] };
+
+            for (auto i : Attack_Interface::iota_byte | std::views::take(63))
+            {
+                auto sc = aes.encrypt(block{ i });
+                temp.push_back({ sc[0],sc[13],sc[10],sc[7] });
+            }
+
+            return verify(translate, temp);
+
+        }
         ciphertexts copy;
 	};
-	void test_atk4_2();
+	
+    void test_atk4_2();
+    
+
+    //static_assert(Attack::debug_assert());
 
 }
 

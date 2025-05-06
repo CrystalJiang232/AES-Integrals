@@ -8,12 +8,12 @@ class Func_Timer
 {
 public:
 	using tp_t = decltype(system_clock::now());
-	constexpr Func_Timer() noexcept : t0{system_clock::now()}
+	Func_Timer() noexcept : t0{system_clock::now()}
 	{
 
 	}
 
-	constexpr ~Func_Timer()
+	~Func_Timer()
 	{
 		if (*this)
 		{
@@ -21,12 +21,12 @@ public:
 		}
 	}
 
-	constexpr operator bool() const noexcept
+	operator bool() const noexcept
 	{
 		return bool{ t0 };
 	}
 
-	constexpr system_clock::duration elapsed_time() const noexcept
+	system_clock::duration elapsed_time() const noexcept
 	{
 		if (!t0)
 		{
@@ -37,15 +37,15 @@ public:
 
 	std::string elapsed_repr() const noexcept
 	{
-		return std::format("{} ms", int(elapsed_time().count()) / 10000);
+		return std::format("{} ms", size_t(elapsed_time().count()) / 10000);
 	}
 
-	constexpr void reset() noexcept
+	void reset() noexcept
 	{
 		t0 = std::nullopt;
 	}
 
-	constexpr void retime() noexcept
+	void retime() noexcept
 	{
 		t0 = system_clock::now();
 	}
