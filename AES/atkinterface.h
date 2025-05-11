@@ -102,3 +102,5 @@ struct Attack_Interface
         0x01_t, 0x02_t, 0x04_t, 0x08_t, 0x10_t, 0x20_t, 0x40_t, 0x80_t, 0x1b_t, 0x36_t
     };
 };
+
+std::vector<block> read_ciphertexts(std::string_view filename);

@@ -1,7 +1,8 @@
 #include "atk4_1.h"
 #include "atk4_2.h"
 #include "timer.h"
-#include <future>
+#include "gen_cipher.h"
+#include <filesystem>
 
 namespace atk4_1
 {
@@ -9,33 +10,16 @@ namespace atk4_1
     {
         using group_t = std::array<block, 256>; //delta-set
 
+
         Func_Timer t{};
-
-        std::string str{};
-
-        auto key = block_fromhex(str).value_or(block{});
-        auto aes = AES<4>(key);
-
-        std::println("4th round key:\n{}", aes.output_rk4());
 
         Attack atk{};
         block sample{};
-        group_t ciphers{};
+        
+        gen_cipher_set(); //Generate delta-set
 
-        for (auto q : Attack_Interface::iota_byte | std::views::take(2))
-        {
-            sample[15] = byte(q);
-
-            for (auto i : Attack_Interface::iota_byte)
-            {
-                sample[0] = byte(i);
-                ciphers[i] = aes.encrypt(sample);
-            }
-            atk.append_ciphertexts(ciphers);
-        }
-
+        atk.append_ciphertexts(read_ciphertexts("delta.txt"));
         atk.solve();
-
     }
 }
 
@@ -79,8 +63,7 @@ namespace atk4_2
             }
         }
 
-        //multi-threads
-
+        //multithreading
         constexpr int thread_count = 16;
 
         std::array<std::jthread, thread_count> jt{};
@@ -90,38 +73,27 @@ namespace atk4_2
         }
         std::println("Thread execution started...");
 
-        //Check status every second to see if a thread has already cracked the key(in terms of identical colouring)?
-
+        //Since use of jthread applied, threads will automatically join upon the destruction of jthread objects at end of life scope
     }
 
     void atk4_2::test_atk4_2()
     {
         using group_t = std::vector<block>; //partial delta-set
+        
+        static_assert(std::same_as <group_t, std::vector<block>>, "group_t must be defined as alias for std::vector<block> for text-reading function to operate");
 
         Func_Timer t{};
-
-        std::string str{};
-
-        auto key = block_fromhex(str).value_or(block{});
-        auto aes = AES<4>(key);
-
-        std::println("4th round key:\n{}", aes.output_rk4());
-
         Attack atk{};
         block sample{};
-
-        group_t ciphers(63, {});
-
-        for (auto i : std::views::iota(0, 63))
+        
+        if (!std::filesystem::exists("delta.txt"))
         {
-            sample[0] = byte(i);
-            ciphers[i] = aes.encrypt(sample);
+            gen_cipher_set();
         }
 
+        group_t ciphers = read_ciphertexts("pdelta.txt");
         atk.assign_ciphertext(ciphers);
         atk.solve();
-
-
     }
 }
 
