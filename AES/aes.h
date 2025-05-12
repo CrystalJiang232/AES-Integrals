@@ -8,6 +8,7 @@
 #include <print>
 #include <expected>
 #include <vector>
+#pragma warning(disable:4244)
 
 using uc = unsigned char;
 
@@ -59,7 +60,6 @@ struct byte
     }
 
     //compound assignment operators
-
 
     constexpr byte& operator&=(byte right) noexcept
     {
@@ -407,7 +407,7 @@ private:
     {
         if (index < 0 || index > Rounds)
         {
-            throw std::exception{ std::format("Invalid round key index {}: Should be in range(0,{})",index,Rounds).c_str() };
+            throw std::runtime_error(std::format("Invalid round key index {}: Should be in range(0,{})",index,Rounds).c_str());
         }
         bytes_xor(block, rnd_keys[index]);
     }

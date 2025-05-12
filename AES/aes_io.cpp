@@ -42,7 +42,6 @@ std::vector<block> read_ciphertexts(std::string_view filename)
         }
 
     }
-
     return ret;
 }
 
@@ -62,6 +61,8 @@ block randblock()
 
 void gen_cipher_set()
 {
+    constexpr bool opt_ans = true; //whether to output the answer key
+    
     auto key = randblock();
     auto aes = AES<4>(key);
 
@@ -71,7 +72,7 @@ void gen_cipher_set()
     {
         vc[i][0] = byte(i);
     }
-    std::ofstream os{ "delta.txt"}, os2{ "pdelta.txt"};
+    std::ofstream os{ "delta.txt" }, os2{ "pdelta.txt" };
 
     for (block_rvw bk : vc)
     {
@@ -81,5 +82,12 @@ void gen_cipher_set()
     for (block_rvw bk : vc | std::views::take(66))
     {
         std::println(os2, "{}", aes.encrypt(bk));
+    }
+
+    if (opt_ans)
+    {
+        std::ofstream o3{ "key.txt" };
+        std::println(o3, "{}", key);
+        std::println(o3,"{}",aes.output_rk4());
     }
 }

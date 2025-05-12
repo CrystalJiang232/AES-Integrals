@@ -4,7 +4,6 @@
 
 namespace atk4_2
 {
-
     static constexpr byte gdb_fn(byte b) noexcept
     {
         return byte((b & 0x80) ? (((b << 1) ^ 0x1B) & 0xFF) : (b << 1));
@@ -36,7 +35,49 @@ namespace atk4_2
         using cipher_group = std::vector<word>; //Ciphertext with identical color's archive
         using cipher_group_rvw = std::span<const word>;
 
+        class EncKey
+        {
+        public:
+            constexpr EncKey() = default;
+            constexpr EncKey(const EncKey&) = delete;
+            constexpr EncKey& operator=(const EncKey&) = delete;
 
+            constexpr std::optional<block> exp_key() const noexcept
+            {
+                if (!ready())
+                {
+                    return std::nullopt;
+                }
+
+                block result;
+
+                for (int i : std::views::iota(0, 4))
+                {
+                    for (int j : std::views::iota(0, 4))
+                    {
+                        result[Attack_Interface::inv_shift_rows_idx[i * 4 + j]] = (*status[0])[j];
+                    }
+                }
+
+                return result;
+            }
+
+            constexpr bool ready() const noexcept
+            {
+                return std::ranges::all_of(status, &std::optional<word>::has_value);
+            }
+
+            constexpr bool idx_complete(size_t idx) const noexcept
+            {
+                return status[idx].has_value();
+            }
+
+        private:
+            std::array<std::optional<word>,4> status;
+
+            friend Attack;
+        };
+        
         constexpr Attack() :copy{}
         {
 
@@ -48,7 +89,12 @@ namespace atk4_2
         constexpr void assign_ciphertext(ciphertext_rvw vw)
         {
             copy.clear();
-            copy.append_range(vw);
+            //copy.append_range(vw);
+            copy.resize(vw.size(),{});
+            for(auto i : std::views::iota(0ull,vw.size()))
+            {
+                std::ranges::copy(vw[i],copy[i].begin());
+            }
         }
 
         static constexpr int mix[] =
@@ -62,6 +108,7 @@ namespace atk4_2
         
         static void single_thread(int,cipher_group_rvw,int); //Single thread execution
         void solve();
+        void printkey();
     private:
 
         static constexpr auto iota_word = std::views::iota(0, 4);
@@ -101,26 +148,21 @@ namespace atk4_2
                 i = inv_s_box[i];
             }
         }
-
         static constexpr void inv_mix_columns(word_vw buf) noexcept
         {
-            byte u = gdb[gdb[buf[0] ^ buf[2]]], v = gdb[gdb[buf[1] ^ buf[3]]];
-            buf[0] ^= u;
-            buf[1] ^= v;
-            buf[2] ^= u;
-            buf[3] ^= v;
-            // mix single column
-            byte t = buf[0] ^ buf[1] ^ buf[2] ^ buf[3];
-            u = buf[0];
-            buf[0] ^= t ^ gdb[buf[0] ^ buf[1]];
-            buf[1] ^= t ^ gdb[buf[1] ^ buf[2]];
-            buf[2] ^= t ^ gdb[buf[2] ^ buf[3]];
-            buf[3] ^= t ^ gdb[buf[3] ^ u];
+            word res;
+            for(int i : std::views::iota(0,4))
+            {
+                for(int j : std::views::iota(0,4))
+                {
+                    res[i] ^= gmul(buf[(i+j) % 4],j+4);
+                }
+            }
+            std::ranges::copy(res,buf.begin());
         }
-
+        
         static constexpr bool verify(word partial_key,cipher_group_rvw vws) noexcept //vws is the pre-processed(shift-row completed) ciphertext "identical-color" 4s
         {
-            //using check_map = std::multimap<int, byte>;
             using check_map = std::array<bool, 1024>;
             check_map mp{};
 
@@ -164,13 +206,10 @@ namespace atk4_2
 
         }
         ciphertexts copy;
+        static inline EncKey result_key;
 	};
 	
     void test_atk4_2();
-    
-
-    //static_assert(Attack::debug_assert());
-
 }
 
 template<>

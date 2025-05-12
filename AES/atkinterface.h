@@ -104,3 +104,8 @@ struct Attack_Interface
 };
 
 std::vector<block> read_ciphertexts(std::string_view filename);
+
+template<size_t Rounds>
+block inv_key_expansion(block rnd_keys);
+
+

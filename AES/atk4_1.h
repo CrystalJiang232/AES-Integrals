@@ -25,7 +25,9 @@ namespace atk4_1
             {
                 throw std::invalid_argument{"Each group of ciphertext must be a delta-set of length 256"};
             }
-            copy.push_back({ std::from_range,vw });
+            ciphertexts cp{};
+            std::ranges::copy(vw,std::back_inserter(cp));
+            copy.push_back(cp);
         }
 
         void solve()

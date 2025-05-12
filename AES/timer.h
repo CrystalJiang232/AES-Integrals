@@ -3,12 +3,12 @@
 #include <print>
 #include <optional>
 
-using std::chrono::system_clock;
+using std::chrono::steady_clock;
 class Func_Timer
 {
 public:
-	using tp_t = decltype(system_clock::now());
-	Func_Timer() noexcept : t0{system_clock::now()}
+	using tp_t = decltype(steady_clock::now());
+	Func_Timer() noexcept : t0{steady_clock::now()}
 	{
 
 	}
@@ -26,18 +26,18 @@ public:
 		return bool{ t0 };
 	}
 
-	system_clock::duration elapsed_time() const noexcept
+	steady_clock::duration elapsed_time() const noexcept
 	{
 		if (!t0)
 		{
 			return {};
 		}
-		return system_clock::now() - *t0;
+		return steady_clock::now() - *t0;
 	}
 
 	std::string elapsed_repr() const noexcept
 	{
-		return std::format("{} ms", size_t(elapsed_time().count()) / 10000);
+		return std::format("{} ms", count_nanos() / 1'000'000);
 	}
 
 	void reset() noexcept
@@ -47,7 +47,12 @@ public:
 
 	void retime() noexcept
 	{
-		t0 = system_clock::now();
+		t0 = steady_clock::now();
+	}
+
+	long long count_nanos() const noexcept
+	{
+		return std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed_time()).count();
 	}
 
 private:
