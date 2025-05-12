@@ -88,6 +88,5 @@ void gen_cipher_set()
     {
         std::ofstream o3{ "key.txt" };
         std::println(o3, "{}", key);
-        std::println(o3,"{}",aes.output_rk4());
     }
 }

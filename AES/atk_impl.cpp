@@ -6,7 +6,7 @@
 #include <thread>
 #include <future>
 
-template<size_t Rounds = 4> requires (Rounds > 0 && Rounds < 16)
+template<size_t Rounds = 4> requires (Rounds > 0 && Rounds <= 10)
 block inv_key_expansion(block rnd_keys)
 {
     block cur = rnd_keys;
@@ -86,7 +86,9 @@ namespace atk4_2
         //multithreading dispatch
         constexpr size_t thread_count = 20;
         std::array<std::jthread, thread_count> jt{};
-        std::println("Thread execution started...");
+        std::println("Decryption started with {} threads...", thread_count);
+
+        auto last = t.elapsed_time();
 
         for (size_t id = 0,alloc = 0;id < 4;)
         {
@@ -96,8 +98,8 @@ namespace atk4_2
             }
 
             jt = {}; //Implicitly join all threads dispatched
-
-            std::println("{}", t.elapsed_repr());
+            std::println("Last {} * 2^24 parallel decryption time spent = {} ms", thread_count, std::chrono::duration_cast<std::chrono::milliseconds>(t.elapsed_time() - last).count());
+            last = t.elapsed_time();
             if (result_key.status[id]) //Move on to next idx
             {
                 auto val = (t.count_nanos() / 1'000'000) / 1000.0; //Explicitly truncate trailing floats
@@ -110,6 +112,8 @@ namespace atk4_2
                 alloc += thread_count;
             }
         }
+
+        t.reset();
     }
 
     void test_atk4_2()
@@ -117,8 +121,6 @@ namespace atk4_2
         using group_t = std::vector<block>; //partial delta-set
         
         static_assert(std::same_as <group_t, std::vector<block>>, "group_t must be defined as alias for std::vector<block> for text-reading function to operate");
-
-        Func_Timer t{};
         Attack atk{};
         block sample{};
         

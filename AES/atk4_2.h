@@ -50,7 +50,7 @@ namespace atk4_2
             constexpr EncKey(const EncKey&) = delete;
             constexpr EncKey& operator=(const EncKey&) = delete;
 
-            constexpr std::optional<block> exp_key() const noexcept
+            constexpr std::optional<block> exp_key() const noexcept //Output the sorted 4th round key
             {
                 if (!ready())
                 {
@@ -63,7 +63,7 @@ namespace atk4_2
                 {
                     for (int j : std::views::iota(0, 4))
                     {
-                        result[Attack_Interface::inv_shift_rows_idx[i * 4 + j]] = (*status[0])[j];
+                        result[Attack_Interface::inv_shift_rows_idx[i * 4 + j]] = (*status[i])[j];
                     }
                 }
 

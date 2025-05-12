@@ -13,17 +13,15 @@ if(MSVC)
         string(REGEX REPLACE "/RTC[0-9]" "" ${var} "${${var}}")
 
     endforeach()
-    set(CMAKE_CXX_FLAGS_RELEASE "/W3 /WX /Ox /fp:fast /DNDEBUG")
-
-
 else()
+    include_directories(/usr/include/c++/14)  # Add this to CMakeLists.txt
     add_compile_options(-O3 -march=native -ffast-math)
 endif()
 
 
 
 if(MSVC)
-    add_compile_options(/W3 /WX /sdl)
+    add_compile_options(/W3 /WX- /sdl /Ox /Oi /Ot /fp:fast /DNDEBUG)
 else()
     add_compile_options(-Wall -Wstack-usage=1024)
 endif()
