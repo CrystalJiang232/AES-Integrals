@@ -4,6 +4,14 @@
 
 namespace atk4_2
 {
+    static constexpr auto gen_keyrng(uc first) noexcept
+    {
+        auto ib = Attack_Interface::iota_byte;
+        return std::views::cartesian_product(ib, ib, ib) | std::views::transform([first](auto&& a) {auto&& [x, y, z] = a;return std::array<byte,4>{ byte(first),x,y,z };});
+    }
+
+    using keyrng_t = decltype(gen_keyrng(0));
+
     static constexpr byte gdb_fn(byte b) noexcept
     {
         return byte((b & 0x80) ? (((b << 1) ^ 0x1B) & 0xFF) : (b << 1));
@@ -105,8 +113,7 @@ namespace atk4_2
             12,9,6,3
         };
 
-        
-        static void single_thread(int,cipher_group_rvw,int); //Single thread execution
+        static void single_thread(cipher_group_rvw,keyrng_t,size_t); //Single thread execution
         void solve();
         void printkey();
     private:

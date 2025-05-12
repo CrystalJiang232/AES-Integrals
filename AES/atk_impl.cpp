@@ -54,32 +54,22 @@ namespace atk4_1
 
 namespace atk4_2
 {
-    void Attack::single_thread(int idx,cipher_group_rvw v,int init)
+    void Attack::single_thread(cipher_group_rvw v,keyrng_t rng,size_t idx)
     {
-        Func_Timer t{};
-        auto iota_byte = Attack_Interface::iota_byte;
-        auto key_rng = std::views::cartesian_product(iota_byte | std::views::drop(init) | std::views::take(64), iota_byte, iota_byte, iota_byte)
-            | std::views::transform([](auto&& x) {auto&& [a, b, c, d] = x; return word{ a,b,c,d };});
-
-        byte last;
-        for(word wd : key_rng)
+        for(word wd : rng)
         {
             if (verify(wd, v))
             {
-                std::println("Group {} key resolved!", idx / 4);
-                result_key.status[idx / 4] = wd;
+                result_key.status[idx] = wd;
                 break;
             }
         }
-        //std::print("Thread {} execution complete with t = ", idx);
     }
 
     void Attack::solve()
     {
-        //Probability
-        
-
         //Process ciphertexts
+        Func_Timer t{};
         std::array<cipher_group, 4> total;
         for (block_rvw v : copy)
         {
@@ -93,41 +83,33 @@ namespace atk4_2
             }
         }
 
-        //multithreading
-        constexpr int thread_count = 16;
-
+        //multithreading dispatch
+        constexpr size_t thread_count = 20;
         std::array<std::jthread, thread_count> jt{};
-        for (auto i : std::views::iota(0,thread_count))
-        {
-            jt[i] = std::jthread{ single_thread,i ,total[i / 4],(i % 4) * 64 };
-        }
-
-        /*
-        std::array<bool, 4> cp{};
-        while (!result_key.ready())
-        {
-            for (int i : std::views::iota(0, 4) | std::views::filter([&cp](int x){return cp[x] == false;}))
-            {
-                if (result_key.idx_complete(i))
-                {
-                    cp[i] = true;
-                    for (int j : std::views::iota(0, 4))
-                    {
-                        jt[i * 4 + j].request_stop();
-                    }
-                }
-            }
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
-        */
-        /*
-        std::array <std::future<void>, thread_count> jt{};
-        for (auto i : std::views::iota(0, thread_count))
-        {
-            jt[i] = std::async(&Attack::single_thread,std::ref(*this),i,total[i / 4],(i % 4) * 64);
-        }
-        */
         std::println("Thread execution started...");
+
+        for (size_t id = 0,alloc = 0;id < 4;)
+        {
+            for (size_t i : std::views::iota(0ull,thread_count))
+            {
+                jt[i] = std::jthread{ single_thread,total[id],gen_keyrng(i + alloc),id };
+            }
+
+            jt = {}; //Implicitly join all threads dispatched
+
+            std::println("{}", t.elapsed_repr());
+            if (result_key.status[id]) //Move on to next idx
+            {
+                auto val = (t.count_nanos() / 1'000'000) / 1000.0; //Explicitly truncate trailing floats
+                std::println("Key group {} / 4 deciphered, time elapsed = {:.3}s", id + 1, val);
+                ++id;
+                alloc = 0;
+            }
+            else
+            {
+                alloc += thread_count;
+            }
+        }
     }
 
     void test_atk4_2()

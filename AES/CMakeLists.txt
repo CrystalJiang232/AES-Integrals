@@ -28,7 +28,10 @@ else()
     add_compile_options(-Wall -Wstack-usage=1024)
 endif()
 
-file(GLOB SOURCES "*.cpp")
+file(GLOB SOURCES
+"atk_impl.cpp"
+"test.cpp"
+"aes_io.cpp")
 
 add_executable(aes_integral_attack ${SOURCES})
 
