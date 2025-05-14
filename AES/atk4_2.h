@@ -1,5 +1,6 @@
 #pragma once
 #include "atkinterface.h"
+#include "config.h"
 #include <thread>
 
 namespace atk4_2
@@ -86,7 +87,7 @@ namespace atk4_2
             friend Attack;
         };
         
-        constexpr Attack() :copy{}
+        constexpr Attack(config c) :copy{},cfg{c}
         {
 
         }
@@ -115,7 +116,6 @@ namespace atk4_2
 
         static void single_thread(cipher_group_rvw,keyrng_t,size_t); //Single thread execution
         void solve();
-        void printkey();
     private:
 
         static constexpr auto iota_word = std::views::iota(0, 4);
@@ -193,30 +193,13 @@ namespace atk4_2
             return true;
         }
 
-        public:
-        static constexpr bool debug_assert() noexcept
-        {
-            block key{};
-            auto aes = AES<4>{ key };
-            cipher_group temp{};
-
-            auto k4 = aes.output_rk4();
-            auto translate = word{ k4[0],k4[13],k4[10],k4[7] };
-
-            for (auto i : Attack_Interface::iota_byte | std::views::take(63))
-            {
-                auto sc = aes.encrypt(block{ i });
-                temp.push_back({ sc[0],sc[13],sc[10],sc[7] });
-            }
-
-            return verify(translate, temp);
-
-        }
+    private:
         ciphertexts copy;
         static inline EncKey result_key;
+        const config cfg;
 	};
 	
-    void test_atk4_2();
+    void atk4_2();
 }
 
 template<>

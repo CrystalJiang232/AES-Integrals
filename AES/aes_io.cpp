@@ -60,6 +60,7 @@ block randblock()
 }
 
 void gen_cipher_set()
+/*Generates a ciphertext named "pdelta.txt" and key stored in "secret.txt"*/
 {
     constexpr bool opt_ans = true; //whether to output the answer key
     
@@ -86,7 +87,7 @@ void gen_cipher_set()
 
     if (opt_ans)
     {
-        std::ofstream o3{ "key.txt" };
+        std::ofstream o3{ "secret.txt" };
         std::println(o3, "{}", key);
     }
 }

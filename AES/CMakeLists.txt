@@ -28,8 +28,10 @@ endif()
 
 file(GLOB SOURCES
 "atk_impl.cpp"
-"test.cpp"
-"aes_io.cpp")
+"main.cpp"
+"aes_io.cpp"
+"phase_impl.cpp"
+)
 
 add_executable(aes_integral_attack ${SOURCES})
 

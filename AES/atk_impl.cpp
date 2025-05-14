@@ -2,10 +2,17 @@
 #include "atk4_2.h"
 #include "timer.h"
 #include "gen_cipher.h"
+#include "config.h"
+
+#ifdef __GNUC__
+#include<bits/stdc++.h>
+#else
 #include <filesystem>
 #include <thread>
 #include <future>
-
+#include <fstream>
+#include <iostream>
+#endif
 template<size_t Rounds = 4> requires (Rounds > 0 && Rounds <= 10)
 block inv_key_expansion(block rnd_keys)
 {
@@ -86,7 +93,11 @@ namespace atk4_2
         //multithreading dispatch
         constexpr size_t thread_count = 20;
         std::array<std::jthread, thread_count> jt{};
-        std::println("Decryption started with {} threads...", thread_count);
+        
+        if(int(cfg.ech) != int(config::echo::noecho))
+        {
+            std::println("Decryption started with {} threads...", thread_count);
+        }
 
         auto last = t.elapsed_time();
 
@@ -98,12 +109,20 @@ namespace atk4_2
             }
 
             jt = {}; //Implicitly join all threads dispatched
-            std::println("Last {} * 2^24 parallel decryption time spent = {} ms", thread_count, std::chrono::duration_cast<std::chrono::milliseconds>(t.elapsed_time() - last).count());
+            
+            if(int(cfg.ech) == int(config::echo::all))
+            {
+                std::println("Last {} * 2^24 parallel decryption time spent = {} ms", thread_count, std::chrono::duration_cast<std::chrono::milliseconds>(t.elapsed_time() - last).count());
+            }
+            
             last = t.elapsed_time();
             if (result_key.status[id]) //Move on to next idx
             {
                 auto val = (t.count_nanos() / 1'000'000) / 1000.0; //Explicitly truncate trailing floats
-                std::println("Key group {} / 4 deciphered, time elapsed = {:.3}s", id + 1, val);
+                if(int(cfg.ech) <= int(config::echo::group))
+                {
+                    std::println("Key group {} / 4 deciphered, time elapsed = {:.3}s", id + 1, val);
+                }
                 ++id;
                 alloc = 0;
             }
@@ -112,16 +131,39 @@ namespace atk4_2
                 alloc += thread_count;
             }
         }
+        
+        if(!result_key.ready())
+        {
+            std::println(stderr,"Decipher failed!");
+            exit(1);
+        }
 
-        t.reset();
+        block final = inv_key_expansion<4>(*result_key.exp_key());
+
+        if(int(cfg.ech) <= int(config::echo::total))
+        {
+            std::println("Decipher complete, time elapsed = {:.3}s",(t.count_nanos() / 1'000'000) / 1000.0);
+            std::println("Result key: {}",final);
+        }
+        
+        if(cfg.outputname != "")
+        {
+            if(int(cfg.output) == int(config::io_t::hextest))
+            {
+                std::ofstream os{"key.txt"};
+                std::println(os,"{}",final);
+            }
+        }
+        
+        t.reset(); //Disable final output
     }
 
-    void test_atk4_2()
+    void atk4_2(config c)
     {
         using group_t = std::vector<block>; //partial delta-set
         
         static_assert(std::same_as <group_t, std::vector<block>>, "group_t must be defined as alias for std::vector<block> for text-reading function to operate");
-        Attack atk{};
+        Attack atk{c};
         block sample{};
         
         if (!std::filesystem::exists("delta.txt"))
@@ -132,12 +174,7 @@ namespace atk4_2
         group_t ciphers = read_ciphertexts("pdelta.txt");
         atk.assign_ciphertext(ciphers);
         atk.solve();
-        atk.printkey();
     }
 
-    void Attack::printkey()
-    {
-        std::println("Original key: {}",inv_key_expansion<4>(*result_key.exp_key()));
-    }
 }
 
