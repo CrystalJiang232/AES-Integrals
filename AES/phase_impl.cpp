@@ -1,5 +1,19 @@
 #include "phase.h"
+#include "gen_cipher.h"
 
+#ifdef __GNUC__
+#include <bits/stdc++.h>
+#else
+#include <charconv>
+#include <print>
+#endif
+
+ArgParser::ArgParser() = default;
+
+ArgParser::ArgParser(std::initializer_list<std::pair<const std::string_view,bool>> is) : options{is}
+{
+
+}
 
 void ArgParser::addOption(std::string_view name, bool isFlag)
 {
@@ -58,3 +72,159 @@ bool ArgParser::getFlag(std::string_view name) const
 {
     return values.count(name) > 0;
 }
+
+
+ArgParser make_ArgParser() //ArgParser options added here
+{
+	return ArgParser{
+		{"h",true}, //help
+		{"g",true}, //generate cipher set
+		{"i",false}, //inputfile
+		{"o",false}, //outputfile
+		{"nothread",true}, //whether to disable multithreading
+		{"count",false}, //maximum ciphertext count
+		{"echo",false} //extent of echoing messages to the terminal
+	};
+}
+
+
+std::expected<config, int> parse_configurate(int argc, char** argv)
+{
+	ArgParser ap = make_ArgParser();
+	config cfg;
+
+	if (!ap.parse(argc, argv))
+	{
+		//No argument specified
+		usage();
+		return std::unexpected(1);
+	}
+
+	if (ap.getFlag("h"))
+	{
+		//help
+		help();
+		return std::unexpected(0);
+	}
+
+	if(ap.getFlag("g"))
+	{
+		//Generate cipher set
+		gen_cipher_set();
+		std::println("Cipher set has been saved to ./pdelta.txt");
+		return std::unexpected(0);
+	}
+
+	//input file logic
+
+	switch (ap.getFlag("i") + (ap.getFlag("it") << 1) + (ap.getFlag("ib") << 2))
+	{
+	case 1:
+		cfg.inputname = ap.getValue("i");
+		cfg.input = config::io_t::hextest;
+		break;
+	case 2:
+		cfg.inputname = ap.getValue("it");
+		cfg.input = config::io_t::hextest;
+		break;
+	case 4:
+		cfg.inputname = ap.getValue("ib");
+		cfg.input = config::io_t::binary;
+		break;
+	default:
+		//Invalid specifier: input can be given once and once only
+		usage();
+		return std::unexpected(1);
+	}
+
+	//output file logic
+
+	switch (ap.getFlag("o") + (ap.getFlag("ot") << 1) + (ap.getFlag("ob") << 2))
+	{
+	case 0:
+		break;
+	case 1:
+		cfg.outputname = ap.getValue("o");
+		cfg.output = config::io_t::hextest;
+		break;
+	case 2:
+		cfg.outputname = ap.getValue("ot");
+		cfg.output = config::io_t::hextest;
+		break;
+	case 4:
+		cfg.outputname = ap.getValue("ob");
+		cfg.output = config::io_t::binary;
+		break;
+	default:
+		//Invalid specifier: output can be given no more than once
+		usage();
+		return std::unexpected(1);
+	}
+
+	if (ap.getFlag("count"))
+	{
+		std::string temp(ap.getValue("count"));
+		if (auto [x, y] = std::from_chars(temp.data(), temp.data() + temp.length(), cfg.count);y != std::errc{})
+		{
+			//Invalid numeric string for `count`
+			usage();
+			return std::unexpected(1);
+		}
+	}
+	else
+	{
+		cfg.count = 66;
+	}
+
+	cfg.threading = !ap.getFlag("nothread");
+
+	if (ap.getFlag("echo"))
+	{
+		std::string temp(ap.getValue("echo"));
+		int op{ -2 };
+		if (auto [x, y] = std::from_chars(temp.data(), temp.data() + temp.length(), op);y != std::errc{} || op < 0 || op > 3)
+		{
+			//Invalid numeric string for `echo`
+			usage();
+			return std::unexpected(1);
+		}
+		cfg.ech = config::echo(op);
+	}
+	return cfg;
+
+}
+
+void usage()
+{
+	std::println("Usage: -i|--it|--ib <filename1> [-o|--ot|--ob <filename2>] [-count xxx] [-echo xxx] [--nothread]\nFor help specify \"-h\"");
+}
+
+
+
+void help()
+{
+	std::println
+	("Usage: -i|--it|--ib <filename1> [-o|--ot|--ob <filename2>] [--count xxx] [--echo xxx] [--nothread]\n"
+		"    -g|-h\n"
+		"-i,--it        Use <filename1> as input in hexidecimal-text format.\n"
+		"--ib           Use <filename1> as input in binary format.\n"
+		"               One of the input options must be specified.\n"
+		"-o,--ot        Use <filename2> as output in hexidecimal-text format.\n"
+		"--ob           Use <filename2> as output in binary format.\n"
+		"               The key in hex format will be printed to the console disregarding the specification(or omit) of this option, unless provided -echo=0.\n"
+		"--count xxx    Read at most xxx valid ciphertexts from input file. Valid range for xxx is 30-256. Default value is 66.\n"
+		"               Note that ciphertext count lower than 50 can cause significant loss in decryption accuracy."
+		"--echo xxx     Specify the echo contents:\n"
+		"               3 - Display time elapsed for every round of decryption attempt.\n"
+		"               2 - Display time elapsed for every group of key deciphered(Default option).\n"
+		"               1 - Display time elapsed after completing the entire decryption process.\n"
+		"               0 - Disable echo to the terminal.\n"
+		"               Default value is 2.\n"
+		"--nothread     Disable multithreading.This may prolong the execution time by several magnitude.\n");
+
+	std::println
+	(   "-g             Generate a cipher set(partial delta-set with length = 66) under current directory.\n"
+	    "-h             View help screen.");
+}
+	
+

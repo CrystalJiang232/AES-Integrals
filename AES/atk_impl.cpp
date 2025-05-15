@@ -91,50 +91,104 @@ namespace atk4_2
         }
 
         //multithreading dispatch
-        constexpr size_t thread_count = 20;
-        std::array<std::jthread, thread_count> jt{};
-        
-        if(int(cfg.ech) != int(config::echo::noecho))
-        {
-            std::println("Decryption started with {} threads...", thread_count);
-        }
 
-        auto last = t.elapsed_time();
-
-        for (size_t id = 0,alloc = 0;id < 4;)
+        if(cfg.threading)
         {
-            for (size_t i : std::views::iota(0ull,thread_count))
+            size_t thread_count = std::thread::hardware_concurrency();
+            std::vector<std::jthread> jt{};
+            if(int(cfg.ech) != int(config::echo::noecho))
             {
-                jt[i] = std::jthread{ single_thread,total[id],gen_keyrng(i + alloc),id };
+                std::println("Decryption started with {} threads...", thread_count);
             }
 
-            jt = {}; //Implicitly join all threads dispatched
-            
-            if(int(cfg.ech) == int(config::echo::all))
+            auto last = t.elapsed_time();
+
+            for (size_t id = 0,alloc = 0;id < 4;)
+                //id: Current cipher group(range(0,4))
+                //alloc: First byte of key that's currently being brute-force tested
             {
-                std::println("Last {} * 2^24 parallel decryption time spent = {} ms", thread_count, std::chrono::duration_cast<std::chrono::milliseconds>(t.elapsed_time() - last).count());
-            }
-            
-            last = t.elapsed_time();
-            if (result_key.status[id]) //Move on to next idx
-            {
-                auto val = (t.count_nanos() / 1'000'000) / 1000.0; //Explicitly truncate trailing floats
-                if(int(cfg.ech) <= int(config::echo::group))
+                for (size_t i : std::views::iota(0ull,thread_count))
                 {
-                    std::println("Key group {} / 4 deciphered, time elapsed = {:.3}s", id + 1, val);
+                    jt.push_back(std::jthread{ single_thread,total[id],gen_keyrng(i + alloc),id });
                 }
-                ++id;
-                alloc = 0;
+
+                jt.clear(); //Implicitly join all threads dispatched
+                
+                if(int(cfg.ech) == int(config::echo::all))
+                {
+                    std::println("Last {} * 2^24 parallel decryption time spent = {} ms", thread_count, std::chrono::duration_cast<std::chrono::milliseconds>(t.elapsed_time() - last).count());
+                }
+                
+                last = t.elapsed_time();
+                if (result_key.status[id]) //Move on to next idx
+                {
+                    auto val = (t.count_nanos() / 1'000'000) / 1000.0; //Explicitly truncate trailing floats
+                    if(int(cfg.ech) <= int(config::echo::group))
+                    {
+                        std::println("Key group {} / 4 deciphered, time elapsed = {:.3}s", id + 1, val);
+                    }
+                    ++id;
+                    alloc = 0;
+                }
+                else
+                {
+                    alloc += thread_count;
+                }
             }
-            else
+            
+        }
+        else
+        {
+            //Single-thread execution
+            
+            size_t thread_count = std::thread::hardware_concurrency();
+            std::vector<std::jthread> jt{};
+            if(int(cfg.ech) != int(config::echo::noecho))
             {
-                alloc += thread_count;
+                std::println("Decryption started with {} threads...", thread_count);
             }
+
+            auto last = t.elapsed_time();
+
+            for (size_t id = 0,alloc = 0;id < 4;)
+                //id: Current cipher group(range(0,4))
+                //alloc: First byte of key that's currently being brute-force tested
+            {
+                for (size_t i : std::views::iota(0ull,thread_count))
+                {
+                    jt.push_back(std::jthread{ single_thread,total[id],gen_keyrng(i + alloc),id });
+                }
+
+                jt.clear(); //Implicitly join all threads dispatched
+                
+                if(int(cfg.ech) == int(config::echo::all))
+                {
+                    std::println("Last {} * 2^24 parallel decryption time spent = {} ms", thread_count, std::chrono::duration_cast<std::chrono::milliseconds>(t.elapsed_time() - last).count());
+                }
+                
+                last = t.elapsed_time();
+                if (result_key.status[id]) //Move on to next idx
+                {
+                    auto val = (t.count_nanos() / 1'000'000) / 1000.0; //Explicitly truncate trailing floats
+                    if(int(cfg.ech) <= int(config::echo::group))
+                    {
+                        std::println("Key group {} / 4 deciphered, time elapsed = {:.3}s", id + 1, val);
+                    }
+                    ++id;
+                    alloc = 0;
+                }
+                else
+                {
+                    alloc += thread_count;
+                }
+            }
+            
+
         }
         
         if(!result_key.ready())
         {
-            std::println(stderr,"Decipher failed!");
+            std::println(stderr, "Decipher failed, verify the ciphertext provided");
             exit(1);
         }
 
@@ -155,7 +209,7 @@ namespace atk4_2
             }
         }
         
-        t.reset(); //Disable final output
+        t.reset(); //Disable timer's final output
     }
 
     void atk4_2(config c)

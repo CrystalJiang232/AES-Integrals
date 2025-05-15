@@ -458,14 +458,14 @@ constexpr std::expected<block,std::string> block_fromhex(std::string_view sv)
 {
     auto refloc = sv.data();
     block res{};    
+    size_t read = 0;
     for (auto& bt : res)
     {
         uc temp{};
-        if (sv.empty())
+        if (sv.empty()) //Early terminated, consider returning std::unexpected?
         {
-            break;
+            return std::unexpected{ "Insufficient text to generate a block" };
         }
-        
 
         if (auto val = std::from_chars(sv.data(), sv.data() + 2, temp, 16);val.ptr != sv.data() + 2)
         {
@@ -476,7 +476,7 @@ constexpr std::expected<block,std::string> block_fromhex(std::string_view sv)
         auto fn = [](char ch) -> bool {return std::isblank(ch);};
         sv.remove_prefix(2);
         sv = sv.substr(std::ranges::find_if_not(sv, fn) - sv.begin());
-    }
+    }    
 
     return res;
 }

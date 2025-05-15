@@ -29,8 +29,13 @@ std::vector<block> read_ciphertexts(std::string_view filename)
     constexpr size_t bufsz = 77;
     
     std::ifstream is{ filename.data() };
+    if (!is)
+    {
+        std::println("Failed to open file {}", filename);
+        exit(1);
+    }
+
     std::string buf(bufsz,{});
-    
     std::vector<block> ret;
 
     while (is)
@@ -40,7 +45,6 @@ std::vector<block> read_ciphertexts(std::string_view filename)
         {
             ret.push_back(*val);
         }
-
     }
     return ret;
 }
@@ -73,13 +77,9 @@ void gen_cipher_set()
     {
         vc[i][0] = byte(i);
     }
-    std::ofstream os{ "delta.txt" }, os2{ "pdelta.txt" };
 
-    for (block_rvw bk : vc)
-    {
-        std::println(os, "{}", aes.encrypt(bk));
-    }
-
+    std::ofstream os2{ "pdelta.txt" };    
+    
     for (block_rvw bk : vc | std::views::take(66))
     {
         std::println(os2, "{}", aes.encrypt(bk));
