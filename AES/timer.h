@@ -55,6 +55,8 @@ public:
 		case options::reset:
 			t0 = std::nullopt;
 			break;
+		case options::preserve: //preserve, skip
+			break;
 		}
 
 		return ret;

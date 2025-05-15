@@ -43,14 +43,8 @@ namespace atk4_1
 {
     void test_atk4_1()
     {
-        using group_t = std::array<block, 256>; //delta-set
-
-
         Func_Timer t{};
-
         Attack atk{};
-        block sample{};
-        
         gen_cipher_set(); //Generate delta-set
 
         atk.append_ciphertexts(read_ciphertexts("delta.txt"));
@@ -140,30 +134,28 @@ namespace atk4_2
         else
         {
             //Single-thread execution
-            
-            size_t thread_count = std::thread::hardware_concurrency();
-            std::vector<std::jthread> jt{};
             if(int(cfg.ech) != int(config::echo::noecho))
             {
-                std::println("Decryption started with {} threads...", thread_count);
+                std::println("Single thread decryption started...");
             }
 
+            std::jthread th;
             auto last = t.elapsed_time();
 
-            for (size_t id = 0,alloc = 0;id < 4;)
-                //id: Current cipher group(range(0,4))
-                //alloc: First byte of key that's currently being brute-force tested
+            for (size_t id = 0,alloc = 0;id < 4 && alloc < 256;)
+            //id: Current cipher group(range(0,4))
+            //alloc: First byte of key that's currently being brute-force tested
+            
+            //For the end-of-loop condition:
+            //id == 4 -> Decryption completed
+            //alloc >= 256 -> Iteration complete yet no key found, failed(if key found then alloc will be set to 0)
             {
-                for (size_t i : std::views::iota(0ull,thread_count))
-                {
-                    jt.push_back(std::jthread{ single_thread,total[id],gen_keyrng(i + alloc),id });
-                }
+                th = std::jthread{ single_thread,total[id],gen_keyrng(alloc),id };
+                th.join();
 
-                jt.clear(); //Implicitly join all threads dispatched
-                
                 if(int(cfg.ech) == int(config::echo::all))
                 {
-                    std::println("Last {} * 2^24 parallel decryption time spent = {} ms", thread_count, std::chrono::duration_cast<std::chrono::milliseconds>(t.elapsed_time() - last).count());
+                    std::println("Last 2^24 decryption time spent = {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(t.elapsed_time() - last).count());
                 }
                 
                 last = t.elapsed_time();
@@ -179,7 +171,7 @@ namespace atk4_2
                 }
                 else
                 {
-                    alloc += thread_count;
+                    ++alloc;
                 }
             }
             
@@ -218,8 +210,6 @@ namespace atk4_2
         
         static_assert(std::same_as <group_t, std::vector<block>>, "group_t must be defined as alias for std::vector<block> for text-reading function to operate");
         Attack atk{c};
-        block sample{};
-        
         if (!std::filesystem::exists("delta.txt"))
         {
             gen_cipher_set();

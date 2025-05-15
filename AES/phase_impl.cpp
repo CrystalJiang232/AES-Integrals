@@ -196,35 +196,35 @@ std::expected<config, int> parse_configurate(int argc, char** argv)
 
 void usage()
 {
-	std::println("Usage: -i|--it|--ib <filename1> [-o|--ot|--ob <filename2>] [-count xxx] [-echo xxx] [--nothread]\nFor help specify \"-h\"");
+	std::println("Usage: -i|--it|--ib <filename1> [-o|--ot|--ob <filename2>] [--count xxx] [--echo xxx] [--nothread]\n"
+	 	"       -g|-h\n\n"
+		"For help,specify \"-h\" option");
 }
-
-
 
 void help()
 {
 	std::println
-	("Usage: -i|--it|--ib <filename1> [-o|--ot|--ob <filename2>] [--count xxx] [--echo xxx] [--nothread]\n"
-		"    -g|-h\n"
-		"-i,--it        Use <filename1> as input in hexidecimal-text format.\n"
-		"--ib           Use <filename1> as input in binary format.\n"
+	("Usage: -i|--it|--ib <inputfile> [-o|--ot|--ob <outputfile>] [--count xxx] [--echo xxx] [--nothread]\n"
+	 "       -g|-h\n\n"
+		"-i,--it        Use <inputfile> as input in hexidecimal-text format.\n"
+		"--ib           Use <inputfile> as input in binary format.\n"
 		"               One of the input options must be specified.\n"
-		"-o,--ot        Use <filename2> as output in hexidecimal-text format.\n"
-		"--ob           Use <filename2> as output in binary format.\n"
-		"               The key in hex format will be printed to the console disregarding the specification(or omit) of this option, unless provided -echo=0.\n"
+		"-o,--ot        Use <outputfile> as output in hexidecimal-text format.\n"
+		"--ob           Use <outputfile> as output in binary format.\n"
+		"               The key in hex format will be printed to the console disregarding this option unless -echo=0.\n"
 		"--count xxx    Read at most xxx valid ciphertexts from input file. Valid range for xxx is 30-256. Default value is 66.\n"
 		"               Note that ciphertext count lower than 50 can cause significant loss in decryption accuracy."
-		"--echo xxx     Specify the echo contents:\n"
+		"--echo xxx     Specify the echo(output to the terminal) options:\n"
 		"               3 - Display time elapsed for every round of decryption attempt.\n"
 		"               2 - Display time elapsed for every group of key deciphered(Default option).\n"
 		"               1 - Display time elapsed after completing the entire decryption process.\n"
 		"               0 - Disable echo to the terminal.\n"
 		"               Default value is 2.\n"
-		"--nothread     Disable multithreading.This may prolong the execution time by several magnitude.\n");
+		"--nothread     Disable multithreading. This may significantly prolong the execution time.\n");
 
 	std::println
-	(   "-g             Generate a cipher set(partial delta-set with length = 66) under current directory.\n"
-	    "-h             View help screen.");
+	(   "-g             Generate a Δ'-set ciphertext(length = 66) under current directory for attack testing.\n"
+	    "-h             Display this help screen.");
 }
 	
 

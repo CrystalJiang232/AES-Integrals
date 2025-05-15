@@ -1,5 +1,7 @@
 #pragma once
-
+#ifdef __GNUC__
+#include <bits/stdc++.h>
+#else
 #include <array>
 #include <span>
 #include <algorithm>
@@ -8,7 +10,11 @@
 #include <print>
 #include <expected>
 #include <vector>
+#endif
+
+#ifdef __MSC_VER__
 #pragma warning(disable:4244)
+#endif
 
 using uc = unsigned char;
 
@@ -403,9 +409,9 @@ private:
         return res;
     }
 
-    constexpr void add_round_key(block_vw block, int index)
+    constexpr void add_round_key(block_vw block, size_t index)
     {
-        if (index < 0 || index > Rounds)
+        if (index > Rounds)
         {
             throw std::runtime_error(std::format("Invalid round key index {}: Should be in range(0,{})",index,Rounds).c_str());
         }
@@ -458,7 +464,6 @@ constexpr std::expected<block,std::string> block_fromhex(std::string_view sv)
 {
     auto refloc = sv.data();
     block res{};    
-    size_t read = 0;
     for (auto& bt : res)
     {
         uc temp{};
