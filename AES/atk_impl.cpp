@@ -72,7 +72,7 @@ namespace atk4_2
         //Process ciphertexts
         Func_Timer t{};
         std::array<cipher_group, 4> total;
-        for (block_rvw v : copy)
+        for (block_rvw v : this->copy) //In case that someone lost track of `copy` XD
         {
             for (auto i : iota_word)
             {
@@ -90,7 +90,7 @@ namespace atk4_2
         {
             size_t thread_count = std::thread::hardware_concurrency();
             std::vector<std::jthread> jt{};
-            if(int(cfg.ech) != int(config::echo::noecho))
+            if(cfg.ech >= config::echo::total)
             {
                 std::println("Decryption started with {} threads...", thread_count);
             }
@@ -108,7 +108,7 @@ namespace atk4_2
 
                 jt.clear(); //Implicitly join all threads dispatched
                 
-                if(int(cfg.ech) == int(config::echo::all))
+                if(cfg.ech == config::echo::all)
                 {
                     std::println("Last {} * 2^24 parallel decryption time spent = {} ms", thread_count, std::chrono::duration_cast<std::chrono::milliseconds>(t.elapsed_time() - last).count());
                 }
@@ -117,7 +117,7 @@ namespace atk4_2
                 if (result_key.status[id]) //Move on to next idx
                 {
                     auto val = (t.count_nanos() / 1'000'000) / 1000.0; //Explicitly truncate trailing floats
-                    if(int(cfg.ech) <= int(config::echo::group))
+                    if(cfg.ech >= config::echo::group)
                     {
                         std::println("Key group {} / 4 deciphered, time elapsed = {:.3}s", id + 1, val);
                     }
@@ -134,7 +134,7 @@ namespace atk4_2
         else
         {
             //Single-thread execution
-            if(int(cfg.ech) != int(config::echo::noecho))
+            if(cfg.ech >= config::echo::total)
             {
                 std::println("Single thread decryption started...");
             }
@@ -153,7 +153,7 @@ namespace atk4_2
                 th = std::jthread{ single_thread,total[id],gen_keyrng(alloc),id };
                 th.join();
 
-                if(int(cfg.ech) == int(config::echo::all))
+                if(cfg.ech == config::echo::all)
                 {
                     std::println("Last 2^24 decryption time spent = {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(t.elapsed_time() - last).count());
                 }
@@ -162,7 +162,7 @@ namespace atk4_2
                 if (result_key.status[id]) //Move on to next idx
                 {
                     auto val = (t.count_nanos() / 1'000'000) / 1000.0; //Explicitly truncate trailing floats
-                    if(int(cfg.ech) <= int(config::echo::group))
+                    if(cfg.ech >= config::echo::group)
                     {
                         std::println("Key group {} / 4 deciphered, time elapsed = {:.3}s", id + 1, val);
                     }
@@ -174,8 +174,6 @@ namespace atk4_2
                     ++alloc;
                 }
             }
-            
-
         }
         
         if(!result_key.ready())
@@ -186,19 +184,29 @@ namespace atk4_2
 
         block final = inv_key_expansion<4>(*result_key.exp_key());
 
-        if(int(cfg.ech) <= int(config::echo::total))
+        if(cfg.ech >= config::echo::total)
         {
             std::println("Decipher complete, time elapsed = {:.3}s",(t.count_nanos() / 1'000'000) / 1000.0);
             std::println("Result key: {}",final);
         }
         
-        if(cfg.outputname != "")
+        std::ofstream os{};
+
+        switch (cfg.output)
         {
-            if(int(cfg.output) == int(config::io_t::hextest))
-            {
-                std::ofstream os{"key.txt"};
-                std::println(os,"{}",final);
-            }
+        case config::io_t::hextest:
+            os = std::ofstream{ "key.txt" };
+            std::println(os, "{}", final);
+            break;
+
+        case config::io_t::binary:
+            os = std::ofstream{ "key.key",std::ios_base::binary };
+            os.write(reinterpret_cast<const char*>(final.data()), 16);
+            break;
+        case config::io_t::disabled:
+            break; //explicitly
+        default:
+            break;
         }
         
         t.reset(); //Disable timer's final output

@@ -8,6 +8,11 @@
 class ArgParser
 {
 public:
+    enum class T
+    {
+        
+    };
+
     ArgParser();
     ArgParser(std::initializer_list<std::pair<const std::string_view,bool>>);
     void addOption(std::string_view name, bool isFlag = false);

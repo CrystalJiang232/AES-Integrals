@@ -17,7 +17,7 @@ int main(int argc, char** argv)
 
 	auto atk = atk4_2::Attack(*cfg);
 	
-	auto bk = read_ciphertexts(cfg->inputname); //TODO: Exception handling(invalid stuffs, etc.)
+	auto bk = read_ciphertexts(cfg->inputname);
 
 	atk.assign_ciphertext(bk);
 	atk.solve();

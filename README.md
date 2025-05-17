@@ -26,6 +26,11 @@ CPU：13th Gen Intel i7-13700H（内核数14，逻辑处理器数20）
 平台：WSL-Ubuntu 24.04  
 `build`及编译指令等：参考`./CMakeLists.txt`  
 命令行参数：`./aes-attack -i pdelta.txt -o key.txt --echo 1`  
+结果：  
+100次测试中，  
+单组解密耗时平均值ms，最大值ms，最小值ms  
+密钥获取正确率 %(/100)  
+完整解密耗时平均值ms，最大值ms，最小值ms  
 
 # 亮点
 

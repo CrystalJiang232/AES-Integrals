@@ -23,7 +23,7 @@ endif()
 if(MSVC)
     add_compile_options(/W3 /WX- /sdl /Ox /Oi /Ot /fp:fast /DNDEBUG)
 else()
-    add_compile_options(-Wall -Wstack-usage=1024)
+    add_compile_options(-Wall -Wstack-usage=16384 -Wno-narrowing)
 endif()
 
 file(GLOB SOURCES

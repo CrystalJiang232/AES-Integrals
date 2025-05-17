@@ -12,10 +12,10 @@ struct config
 
 	enum class echo
 	{
-		all,
-		group,
-		total,
-		noecho
+		noecho = 0,
+		total = 1,
+		group = 2,
+		all = 3
 	};
 
 
