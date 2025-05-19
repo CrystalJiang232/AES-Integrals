@@ -14,7 +14,6 @@ if(MSVC)
 
     endforeach()
 else()
-    include_directories(/usr/include/c++/14)  # Add this to CMakeLists.txt
     add_compile_options(-O3 -march=native -ffast-math)
 endif()
 
@@ -37,12 +36,9 @@ add_executable(aes_integral_attack ${SOURCES})
 
 target_link_libraries(aes_integral_attack PRIVATE Threads::Threads)
 
-# Additional pthread flags for Linux/GCC
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     target_link_options(aes_integral_attack PRIVATE "-pthread")
 endif()
-
-
 
 target_include_directories(aes_integral_attack PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
