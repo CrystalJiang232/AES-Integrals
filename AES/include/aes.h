@@ -104,8 +104,6 @@ struct byte
 template<>
 struct std::hash<byte> : std::hash<unsigned char>{};
 
-
-// Literal operator (defined in header)
 constexpr byte operator""_t(unsigned long long _val) noexcept 
 {
     return byte{ _val & 0xff };
@@ -162,6 +160,8 @@ namespace _gmul
 
 }
 
+//Alias declarations: block, block_vw, block_rvw
+
 using _gmul::gmul;
 using block = std::array<byte, 16>;
 using block_vw = std::span<byte, 16>;
@@ -170,7 +170,6 @@ using block_rvw = std::span<const byte, 16>;
 
 
 template<size_t Rounds = 10> requires (Rounds >= 1)
-//constexpr size_t Rounds = 10;
 class AES
 {
 public:
@@ -411,10 +410,6 @@ private:
 
     constexpr void add_round_key(block_vw block, size_t index)
     {
-        if (index > Rounds)
-        {
-            throw std::runtime_error(std::format("Invalid round key index {}: Should be in range(0,{})",index,Rounds).c_str());
-        }
         bytes_xor(block, rnd_keys[index]);
     }
 
@@ -424,10 +419,8 @@ private:
     rnd_key_t rnd_keys;
 };
 
-
-
 template<>
-struct std::formatter<::byte>
+struct std::formatter<::byte> //F**king ADL...
 {
     constexpr auto parse(std::format_parse_context& fpc)
     {

@@ -105,7 +105,31 @@ struct Attack_Interface
 
 std::vector<block> read_ciphertexts(std::string_view filename);
 
-template<size_t Rounds>
-block inv_key_expansion(block rnd_keys);
+template<size_t Rounds = 4> requires (Rounds > 0 && Rounds <= 10)
+block inv_key_expansion(block rnd_keys)
+{
+    block cur = rnd_keys;
+    for (auto i : std::views::iota(1ull, Rounds + 1) | std::views::reverse)
+    {
+        block prv;
+        
+        for (int j : std::views::iota(4, 16))
+        {
+            prv[j] = cur[j] ^ cur[j - 4];
+        }
+
+        cur[0] ^= Attack_Interface::r_con[i - 1];
+
+        for (int j : std::views::iota(0, 4))
+        {
+            prv[j] = cur[j] ^ Attack_Interface::s_box[prv[12 + (j + 1) % 4]];
+        }
+
+        cur = prv;
+    }
+
+    return cur;
+}
+
 
 

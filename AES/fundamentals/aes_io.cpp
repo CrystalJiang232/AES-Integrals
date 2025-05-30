@@ -78,6 +78,13 @@ void gen_cipher_set()
         vc[i][0] = byte(i);
     }
 
+    std::ofstream os1{"delta.txt"};
+
+    for (block_rvw bk : vc)
+    {
+        std::println(os1, "{}", aes.encrypt(bk));
+    }
+
     std::ofstream os2{ "pdelta.txt" };    
     
     for (block_rvw bk : vc | std::views::take(66))

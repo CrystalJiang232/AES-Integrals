@@ -1,45 +1,25 @@
 cmake_minimum_required(VERSION 3.20)
 project(AESIntegralAttack LANGUAGES CXX)
 
-find_package(Threads REQUIRED)
-
+# Global compiler settings
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if(MSVC)
-    add_compile_options(/Ox /fp:fast)
-    foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE)
-        string(REGEX REPLACE "/RTC[0-9]" "" ${var} "${${var}}")
-
-    endforeach()
-else()
-    add_compile_options(-O3 -march=native -ffast-math)
-endif()
-
-
-
+# Platform-specific compiler options
 if(MSVC)
     add_compile_options(/W3 /WX- /sdl /Ox /Oi /Ot /fp:fast /DNDEBUG)
+    foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE)
+        string(REGEX REPLACE "/RTC[0-9]" "" ${var} "${${var}}")
+    endforeach()
+    
 else()
-    add_compile_options(-Wall -Wstack-usage=16384 -Wno-narrowing)
+    add_compile_options(-O3 -march=native -ffast-math -Wall -Wstack-usage=16384 -Wno-narrowing)
 endif()
 
-file(GLOB SOURCES
-"atk_impl.cpp"
-"main.cpp"
-"aes_io.cpp"
-"phase_impl.cpp"
-)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-add_executable(aes_integral_attack ${SOURCES})
-
-target_link_libraries(aes_integral_attack PRIVATE Threads::Threads)
-
-if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-    target_link_options(aes_integral_attack PRIVATE "-pthread")
-endif()
-
-target_include_directories(aes_integral_attack PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
-set_target_properties(aes_integral_attack PROPERTIES OUTPUT_NAME "aes-attack")
+add_subdirectory(fundamentals)
+add_subdirectory(cmdline_args)
+add_subdirectory(4_1)
+add_subdirectory(4_2)
