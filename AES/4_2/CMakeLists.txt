@@ -1,6 +1,7 @@
 add_executable(aes4-2
     main4_2.cpp
     atk4_2.cpp
+    phase4_2.cpp
 )
 
 find_package(Threads REQUIRED)

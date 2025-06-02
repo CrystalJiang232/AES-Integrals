@@ -1,6 +1,7 @@
 #include "aes.h"
 #include "atk4_1.h"
 #include "atkinterface.h"
+#include "timer.h"
 #include <coroutine>
 #include <optional>
 #include <array>
@@ -111,8 +112,16 @@ KeyGenerator generate_keys(std::span<const std::vector<byte>, 16> opt)
 
 namespace atk4_1
 {
+    Attack::Attack(ciphertext_rvw vw):copy{}
+    {
+        std::ranges::copy(vw,copy.data());
+    }
+
+
     void Attack::solve()
     {
+        Func_Timer t{};
+
         keyls ret;
         block sample_key;
         for(auto idx : std::views::iota(0,16))
@@ -128,7 +137,6 @@ namespace atk4_1
                     Attack_Interface::bytes_xor(bk,sample_key);
                     Attack_Interface::inv_shift_rows(bk);
                     Attack_Interface::inv_sub_bytes(bk);
-
                     sumval ^= bk[idx];
                 }
 
@@ -139,8 +147,9 @@ namespace atk4_1
             }
         }
 
-        for(block trykey : generate_keys(ret))
+        for(block r4 : generate_keys(ret))
         {
+            auto trykey = inv_key_expansion<4>(r4);
             if(verify(trykey,this->copy))
             {
                 std::println("Key resolved: {}",trykey);
@@ -149,12 +158,11 @@ namespace atk4_1
         }
     }
 
-    bool Attack::verify(block key,Attack::ciphertext_rvw v)
+    bool Attack::verify(block key,Attack::ciphertext_rvw v) /*key in argument is the original key, not round key*/
     {    
         //Verify if we can retrieve a delta-set-based plaintext
         //This time the key will be verified via double-rolling back to the original status
-        block init_key = inv_key_expansion<4>(key); //Defaults to 4
-        AES<4> aes{init_key};
+        AES<4> aes{key};
 
         Attack::ciphertexts cp_set;
 

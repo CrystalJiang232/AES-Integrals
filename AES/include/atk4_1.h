@@ -10,19 +10,9 @@ namespace atk4_1
         using keyls = std::array<std::vector<byte>, 16>;
 
     public:
-        Attack() :copy{}
-        {
-
-        }
-
+        Attack(ciphertext_rvw);
         Attack(const Attack&) = delete;
         Attack& operator=(const Attack&) = delete;
-
-        constexpr void append_ciphertexts(ciphertext_rvw vw)
-        {
-            std::ranges::copy(vw,copy.begin());
-        }
-
         void solve();
         
     private:
