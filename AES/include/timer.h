@@ -1,83 +1,32 @@
 #pragma once
 #include <chrono>
 #include <print>
-#include <optional>
+#include <expected>
 
 using std::chrono::steady_clock;
-class Func_Timer
+class Base_Timer
 {
 public:
-	enum class options
-	{
-		preserve, //Continue timing
-		retime, //Set timer to zero
-		reset //Disable timer
-	};
-
-
 	using tp_t = decltype(steady_clock::now());
-	Func_Timer() noexcept : t0{steady_clock::now()}
-	{
+	using underlying_t = std::expected<std::pair<steady_clock::time_point,steady_clock::time_point>,std::pair<steady_clock::duration,steady_clock::duration>>;
+	Base_Timer();
+	~Base_Timer() noexcept;
+	Base_Timer(const Base_Timer&);
 
-	}
+	steady_clock::duration current() const noexcept;
+	std::string current_ms() const noexcept;
+	steady_clock::time_point point() const noexcept;
 
-	~Func_Timer()
-	{
-		if (*this)
-		{
-			std::println("{}", elapsed_repr());
-		}
-	}
+	void pause() noexcept;
+	void resume() noexcept;
+	bool is_paused() const noexcept;
+	void reset() noexcept;
 
-	operator bool() const noexcept
-	{
-		return bool{ t0 };
-	}
-
-	steady_clock::duration elapsed_time() const noexcept
-	{
-		if (!t0)
-		{
-			return {};
-		}
-		return steady_clock::now() - *t0;
-	}
-
-	std::string elapsed_repr(options opt = options::preserve) noexcept
-	{
-		auto ret = std::format("{} ms", count_nanos() / 1'000'000);
-		
-		switch (opt)
-		{
-		case options::retime:
-			t0 = steady_clock::now();
-			break;
-		case options::reset:
-			t0 = std::nullopt;
-			break;
-		case options::preserve: //preserve, skip
-			break;
-		}
-
-		return ret;
-
-	}
-
-	void reset() noexcept
-	{
-		t0 = std::nullopt;
-	}
-
-	void retime() noexcept
-	{
-		t0 = steady_clock::now();
-	}
-
-	long long count_nanos() const noexcept
-	{
-		return std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed_time()).count();
-	}
+	steady_clock::duration lap() noexcept;
+	std::string lap_ms() noexcept;
 
 private:
-	std::optional<tp_t> t0;
+	underlying_t cp;
 };
+
+using Func_Timer = Base_Timer; //Tempeorary solution

@@ -43,31 +43,30 @@ namespace atk4_2
                 std::println("Decryption started with {} threads...", thread_count);
             }
 
-            auto last = t.elapsed_time();
+            auto last = t.point();
+            
 
             for (size_t id = 0,alloc = 0;id < 4;)
-                //id: Current cipher group(range(0,4))
-                //alloc: First byte of key that's currently being brute-force tested
+            //id: Current cipher group(range(0,4))
+            //alloc: First byte of key that's currently being brute-force tested
             {
                 for (size_t i : std::views::iota(0ull,thread_count))
                 {
                     jt.push_back(std::jthread{ single_thread,total[id],gen_keyrng(i + alloc),id });
                 }
-
                 jt.clear(); //Implicitly join all threads dispatched
                 
                 if(cfg.ech == config::echo::all)
                 {
-                    std::println("Last {} * 2^24 parallel decryption time spent = {} ms", thread_count, std::chrono::duration_cast<std::chrono::milliseconds>(t.elapsed_time() - last).count());
+                    std::println("Last {} * 2^24 parallel decryption time spent = {}", thread_count,t.lap_ms());
                 }
                 
-                last = t.elapsed_time();
+                last = t.point();
                 if (result_key.status[id]) //Move on to next idx
                 {
-                    auto val = (t.count_nanos() / 1'000'000) / 1000.0; //Explicitly truncate trailing floats
                     if(cfg.ech >= config::echo::group)
                     {
-                        std::println("Key group {} / 4 deciphered, time elapsed = {:.3}s", id + 1, val);
+                        std::println("Key group {} / 4 deciphered, time elapsed = {}", id + 1, t.current_ms());
                     }
                     ++id;
                     alloc = 0;
@@ -88,7 +87,7 @@ namespace atk4_2
             }
 
             std::jthread th;
-            auto last = t.elapsed_time();
+            auto last = t.point();
 
             for (size_t id = 0,alloc = 0;id < 4 && alloc < 256;)
             //id: Current cipher group(range(0,4))
@@ -103,16 +102,15 @@ namespace atk4_2
 
                 if(cfg.ech == config::echo::all)
                 {
-                    std::println("Last 2^24 decryption time spent = {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(t.elapsed_time() - last).count());
+                    std::println("Last 2^24 decryption time spent = {}", t.lap_ms());
                 }
                 
-                last = t.elapsed_time();
+                last = t.point();
                 if (result_key.status[id]) //Move on to next idx
                 {
-                    auto val = (t.count_nanos() / 1'000'000) / 1000.0; //Explicitly truncate trailing floats
                     if(cfg.ech >= config::echo::group)
                     {
-                        std::println("Key group {} / 4 deciphered, time elapsed = {:.3}s", id + 1, val);
+                        std::println("Key group {} / 4 deciphered, time elapsed = {}", id + 1, t.current_ms());
                     }
                     ++id;
                     alloc = 0;
@@ -134,7 +132,7 @@ namespace atk4_2
 
         if(cfg.ech >= config::echo::total)
         {
-            std::println("Decipher complete, time elapsed = {:.3}s",(t.count_nanos() / 1'000'000) / 1000.0);
+            std::println("Decipher complete, time elapsed = {}",t.current_ms());
             std::println("Result key: {}",final);
         }
         
@@ -156,8 +154,6 @@ namespace atk4_2
         default:
             break;
         }
-        
-        t.reset(); //Disable timer's final output
     }
 
     void atk4_2(config c)
