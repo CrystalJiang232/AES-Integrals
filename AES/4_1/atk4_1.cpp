@@ -147,15 +147,24 @@ namespace atk4_1
             }
         }
 
+        bool flag{false};
         for(block r4 : generate_keys(ret))
         {
             auto trykey = inv_key_expansion<4>(r4);
-            if(verify(trykey,this->copy))
+            if((flag = verify(trykey,this->copy)))
             {
                 std::println("Key resolved: {}",trykey);
                 break;
             }
         }
+
+        if(!flag)
+        {
+            std::println("Decipher failed!");
+            exit(1);
+        }
+
+        std::println("Time spent = {}",t.current_str());
     }
 
     bool Attack::verify(block key,Attack::ciphertext_rvw v) /*key in argument is the original key, not round key*/

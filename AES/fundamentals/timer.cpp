@@ -1,4 +1,5 @@
 #include "timer.h"
+#include <utility>
 
 Base_Timer::Base_Timer():cp{{steady_clock::now(),steady_clock::now()}}{}
 Base_Timer::~Base_Timer() noexcept = default;
@@ -9,9 +10,9 @@ steady_clock::duration Base_Timer::current() const noexcept
     return cp ? (steady_clock::now() - cp->first) : cp.error().first;
 }
 
-std::string Base_Timer::current_ms() const noexcept
+std::string Base_Timer::current_str(time_units tu) const noexcept
 {
-    return std::format("{} ms",std::chrono::duration_cast<std::chrono::milliseconds>(current()).count());
+    return duration_conv(current(),tu);
 }
 
 steady_clock::time_point Base_Timer::point() const noexcept
@@ -24,7 +25,7 @@ void Base_Timer::pause() noexcept
     //pause is achieved by transforming the status, thus only need to "pause" if it's not currently running
     if(cp)
     {
-        cp = underlying_t{std::unexpect,current(),lap()};
+        cp = underlying_t{std::unexpect,current(),steady_clock::duration{}};
     }
 }
 
@@ -32,7 +33,7 @@ void Base_Timer::resume() noexcept
 {
     if(!cp)
     {
-        cp = underlying_t{{steady_clock::now() - current(),steady_clock::now() - lap()}};
+        cp = underlying_t{{steady_clock::now() - current(),steady_clock::now()}};
     }
 }
 
@@ -51,12 +52,17 @@ steady_clock::duration Base_Timer::lap() noexcept
     return ret;
 }
 
-std::string Base_Timer::lap_ms() noexcept
+std::string Base_Timer::lap_str(time_units tu) noexcept
 {
-    return std::format("{} ms",std::chrono::duration_cast<std::chrono::milliseconds>(lap()).count());
+    return duration_conv(lap(),tu);
 }
 
 void Base_Timer::reset() noexcept
 {
     cp = underlying_t{std::unexpect};
+}
+
+Base_Timer::operator bool() const noexcept
+{
+    return !is_paused();
 }

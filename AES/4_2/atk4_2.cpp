@@ -58,7 +58,7 @@ namespace atk4_2
                 
                 if(cfg.ech == config::echo::all)
                 {
-                    std::println("Last {} * 2^24 parallel decryption time spent = {}", thread_count,t.lap_ms());
+                    std::println("Last {} * 2^24 parallel decryption time spent = {}", thread_count,t.lap_str());
                 }
                 
                 last = t.point();
@@ -66,7 +66,7 @@ namespace atk4_2
                 {
                     if(cfg.ech >= config::echo::group)
                     {
-                        std::println("Key group {} / 4 deciphered, time elapsed = {}", id + 1, t.current_ms());
+                        std::println("Key group {} / 4 deciphered, time elapsed = {}", id + 1, t.current_str());
                     }
                     ++id;
                     alloc = 0;
@@ -102,7 +102,7 @@ namespace atk4_2
 
                 if(cfg.ech == config::echo::all)
                 {
-                    std::println("Last 2^24 decryption time spent = {}", t.lap_ms());
+                    std::println("Last 2^24 decryption time spent = {}", t.lap_str());
                 }
                 
                 last = t.point();
@@ -110,7 +110,7 @@ namespace atk4_2
                 {
                     if(cfg.ech >= config::echo::group)
                     {
-                        std::println("Key group {} / 4 deciphered, time elapsed = {}", id + 1, t.current_ms());
+                        std::println("Key group {} / 4 deciphered, time elapsed = {}", id + 1, t.current_str());
                     }
                     ++id;
                     alloc = 0;
@@ -132,7 +132,7 @@ namespace atk4_2
 
         if(cfg.ech >= config::echo::total)
         {
-            std::println("Decipher complete, time elapsed = {}",t.current_ms());
+            std::println("Decipher complete, time elapsed = {}",t.current_str());
             std::println("Result key: {}",final);
         }
         
