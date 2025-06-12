@@ -1,4 +1,18 @@
 #include "gen_cipher.h"
+#include "phase.h"
+
+const char* hint = 
+                "Usage: -a [-q]\n"
+                "       -d -p -k [-q]\n"
+                "-a             Generate all; equivalent to '-d -p -k'.\n"
+                "-d             Generate delta-set, that is, the 4-round AES-128 encrypted ciphertext of a random plaintext, with one particular byte traversing from 0x00 to 0x0f.\n"
+                "-p             Generate partial delta-set, a size=66 subset of delta-set by definition.\n"
+                "-k             Output the answer key.\n"
+                "NOTE: The delta-set and partial delta-set, when generated simotaneously, are guaranteed of been encrypted by the same key(output via '-k' option, if designated), yet the sample plaintext used in generating the ciphertext isn't identical(Thus the partial delta-set generated IS NOT a subset of the delta-set generated).\n"
+                "-q             Quiet mode.\n";
+
+
+const char* full = hint;
 
 block randblock()
 {
@@ -14,44 +28,96 @@ block randblock()
     return res;
 }
 
-void gen_cipher_set()
-/*Generates ciphertext sets named "delta.txt" and "pdelta.txt" respectively, with key stored in "secret.txt"*/
+static void delta(block key,std::string_view filename)
 {
-    constexpr bool opt_ans = true; //whether to output the answer key
-    
-    auto key = randblock();
-    auto aes = AES<4>(key);
+    AES<4> aes{key};
 
     auto sample = randblock();
-    std::vector<block> vc(256, sample);
-    for (int i : std::views::iota(0, 256))
-    {
-        vc[i][0] = byte(i);
-    }
+    std::ofstream os{filename.data()};
 
-    std::ofstream os1{"delta.txt"};
-
-    for (block_rvw bk : vc)
+    for(int i : std::views::iota(0,256))
     {
-        std::println(os1, "{}", aes.encrypt(bk));
-    }
-
-    std::ofstream os2{ "pdelta.txt" };    
-    
-    for (block_rvw bk : vc | std::views::take(66))
-    {
-        std::println(os2, "{}", aes.encrypt(bk));
-    }
-
-    if (opt_ans)
-    {
-        std::ofstream o3{ "secret.txt" };
-        std::println(o3, "{}", key);
+        sample[0] = byte(i);
+        std::println(os,"{}",aes.encrypt(sample));
     }
 }
 
-int main()
+static void pdelta(block key,std::string_view filename)
 {
-    gen_cipher_set();
-    std::println("delta.txt and pdelta.txt saved under current directory");
+    AES<4> aes{key};
+
+    auto sample = randblock();
+    std::ofstream os{filename.data()};
+
+    for(int i : std::views::iota(0,66))
+    {
+        sample[0] = byte(i);
+        std::println(os,"{}",aes.encrypt(sample));
+    }
+}
+
+static void pkey(block key,std::string_view filename)
+{
+    std::ofstream os{filename.data()};
+    std::println(os,"{}",key);
+}
+
+int main(int argc,char** argv)
+{
+    ArgParser ap{
+        {"a",true},
+        {"d",true},
+        {"p",true},
+        {"k",true},
+        {"q",true}
+    };
+
+    if(!ap.parse(argc,argv))
+    {
+        exit(1);
+    }
+
+    if(ap.getFlag("h"))
+    {
+        help();
+        return 0;
+    }
+
+    auto flagv = ((ap.getFlag("d") << 2) + (ap.getFlag("p") << 1) + (ap.getFlag("k"))) | (ap.getFlag("a") * 0x07);
+    bool silent = ap.getFlag("q");
+
+    auto trykey = randblock();
+    if(!flagv)
+    {
+        usage();
+        return 1;
+    }
+
+    std::string fn1{"delta.txt"},fn2{"pdelta.txt"},fn3{"key.txt"};
+    
+    if(flagv & 0x04) //delta
+    {
+        delta(trykey,fn1);
+        if(!silent)
+        {
+            std::println("Delta-set saved to {}",fn1);
+        }
+    }
+    if(flagv & 0x02) //pdelta
+    {
+        pdelta(trykey,fn2);
+        if(!silent)
+        {
+            std::println("Partial delta-set saved to {}",fn2);
+        }
+    }
+    if(flagv & 0x01) //answer
+    {
+        pkey(trykey,fn3);
+        if(!silent)
+        {
+            std::println("Key saved to {}",fn3);
+        }
+    }
+    
 }

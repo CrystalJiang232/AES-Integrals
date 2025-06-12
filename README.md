@@ -129,12 +129,21 @@ cmake .. && cmake --build .  # Add `--config Release` for MSVC
 
 ## `./gencp`
 
-> 本程序用于生成测试密文集，暂无命令行参数。  
+```
+参数: -a [-q]
+      -d -p -k [-q]
+-a             生成全部选项（等价于'-d -p -k'）。
+-d             生成Δ-集，即对单个随机明文块，令其某字节遍历0x00-0xff，经4轮AES-128加密的密文集。
+-p             生成Δ'-集，即Δ-集的大小为66的子集。
+-k             输出密钥。
+注意：当同时指定-d和-p时，二者生成密文集所用的加密密钥是相同的（可用-k输出之），但所用的随机明文块并不相同（故实际生成的文件中，Δ'-集的内容并非Δ-集的子集）。
+-q             安静模式。
+``` 
 
 # 正确性验证
 
 ```sh
-./gencp && ./aes4-1 -i delta.txt && ./aes4-2 -i pdelta.txt --echo 3 && cat ./key.txt
+./gencp -a && ./aes4-1 -i delta.txt && ./aes4-2 -i pdelta.txt --echo 3 && cat ./key.txt
 ```
 
 # 展望
@@ -259,11 +268,20 @@ Usage: -i|--it|--ib <inputfile> [-o|--ot|--ob <outputfile>] [--count xxx] [--ech
 
 ## `./gencp`
 
-> This program is used to generate cipher testing set and currently has no CLI arguments.
+```
+Usage: -a [-q]
+       -d -p -k [-q]
+-a             Generate all; equivalent to '-d -p -k'.
+-d             Generate delta-set, that is, the 4-round AES-128 encrypted ciphertext of a random plaintext, with one particular byte traversing from 0x00 to 0x0f.
+-p             Generate partial delta-set, a size=66 subset of delta-set by definition.
+-k             Output the answer key.
+NOTE: The delta-set and partial delta-set, when generated simotaneously, are guaranteed of been encrypted by the same key(output via '-k' option, if designated), yet the sample plaintext used in generating the ciphertext isn't identical(Thus the partial delta-set generated IS NOT a subset of the delta-set generated).
+-q             Quiet mode.
+```
 
 # Validation  
 ```sh
-./gencp && ./aes4-1 -i delta.txt && ./aes4-2 -i pdelta.txt --echo 3 && cat ./key.txt  
+./gencp -a && ./aes4-1 -i delta.txt && ./aes4-2 -i pdelta.txt --echo 3 && cat ./key.txt  
 ```  
 
 # Future Work  

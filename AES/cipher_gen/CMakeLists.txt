@@ -1,7 +1,10 @@
 add_executable(gencp
     gen_cipher.cpp)
 
-target_link_libraries(gencp PRIVATE aesatk-lib)
+target_link_libraries(gencp 
+    PRIVATE 
+        aesatk-lib
+        cmdline_args)
 
 set_target_properties(gencp PROPERTIES
     OUTPUT_NAME "gencp"
