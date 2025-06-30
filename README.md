@@ -12,8 +12,7 @@
 
 基于C++实现了对Δ-集和Δ'-集的4轮AES攻击，代码应用大量现代C++特性，保证效率的情况下达成了极高的可读性，并预留大量接口用于攻击的进一步拓展应用。  
 
-> 下述二测试均采用生成的可执行文件`./gencp`随机生成的Δ-集（`./delta.txt`）和Δ'-集（`./pdelta.txt`）进行。  
-  `./gencp`会随机生成一个AES密钥和Δ-集（第一个字节遍历`0x00`至`0xff`的明文），将4轮AES加密后的密文写入`./delta.txt`（以十六进制文本形式，下同），随后随机选取Δ-集中的66个进行加密，写入`./pdelta.txt`。  
+> 下述二测试均采用生成的可执行文件`./gencp`随机生成的密文集进行。  
 
 ## 测试配置
 
@@ -58,15 +57,15 @@ CPU：13th Gen Intel i7-13700H（内核数14，逻辑处理器数20）
 
 C++语言技术栈：  
 
-1. 基于`jthread`的多线程处理（TODO：线程间通信等实现效率的极限突破）  
-2. `constexpr`修饰大量函数、变量；`consteval`函数阐述“打表”逻辑，极大提升表的可读性&维护性  
-3. *range-*`for`，简洁高效的循环语义；`std::views::iota(0,x)`实现安全的范围迭代  
-4. AES采用`template<size_t Rounds>`，预留不同轮数的开发接口，编译期常量提供高优化空间  
-5. *ranges algorithm* 及利用`operator|`实现链式算法，类型&边界安全+高可读性&维护性  
-6. 自定义轻量级`struct byte`，单向`explicit`“双收”，字面量运算符及其它重载使之易于复用拓展  
-7. 字节块(block)输入/输出方面，向后兼容`iostream`提供流运算符重载，并通过特化`std::formatter`、及`block_fromhex`函数实现二进制和文本形式的块数据相互转换；相关组件及helper-functions等对于字节数据的处理、输入/输出等提供了复用参考  
-8. 应用C++17/20引入的 *view-type*（如`std::string_view`、`std::span`）达成在不同函数间传递时，类型完整信息（如数组大小、`const`语义等）得到保留，同时通过其构造函数对传入参数进行编译期检查，使得函数间传参、内存访问更加安全；使用`using`取`typedef`来达成更好的可读性，同时视图应用能达到极接近原始指针的效率  
-9. 在Δ-集攻击生成“潜在密钥集”时，采用了 *coroutines* 这一特性编写异步`co_yield`可能密钥的类，实现了极佳的可读性的同时，通过惰性迭代降低时间与空间开销，不失为为协程之较好实践  
+1. **多线程**：基于`jthread`的多线程处理（TODO：线程间通信等实现效率的极限突破）  
+2. **编译期计算**：`constexpr`修饰大量函数、变量；`consteval`函数阐述“打表”逻辑，极大提升表的可读性&维护性  
+3. **循环强化**：*range-*`for`，简洁高效的循环语义；`std::views::iota(0,x)`实现安全的范围迭代  
+4. **模板加密类**：AES采用`template<size_t Rounds>`，预留不同轮数的开发接口，编译期常量提供高优化空间  
+5. **ranges算法**：*ranges algorithm* 及利用`operator|`实现链式算法，类型&边界安全+高可读性&维护性  
+6. **自定义`struct byte`**：类型转换中单向`explicit`“双收”，字面量运算符及其它重载使之易于复用拓展  
+7. **字节块(block)输入/输出**：向后兼容`iostream`提供流运算符重载，并通过特化`std::formatter`、及`block_fromhex`函数实现二进制和文本形式的块数据相互转换；相关组件及helper-functions等对于字节数据的处理、输入/输出等提供了复用参考  
+8. ***view-type* 的“妙手”**：应用`std::string_view`、`std::span`等使容器类型完整信息（如数组大小、`const`语义等）在传参过程中得到保留，同时通过其构造函数对传入参数进行编译期检查，使得函数间传参、内存访问更加安全；使用`using`取`typedef`来达成更好的可读性，同时视图应用能达到极接近原始指针的效率  
+9. **Coroutines应用**：在Δ-集攻击生成“潜在密钥集”时，采用了 *coroutines* 这一特性编写异步`co_yield`可能密钥的类，实现了极佳的可读性的同时，通过惰性迭代降低时间与空间开销，不失为为协程之较好实践  
 
 
 密码学技术栈：  
@@ -141,10 +140,31 @@ cmake .. && cmake --build .  # Add `--config Release` for MSVC
 ``` 
 
 # 正确性验证
-
 ```sh
 ./gencp -a && ./aes4-1 -i delta.txt && ./aes4-2 -i pdelta.txt --echo 3 && cat ./key.txt
 ```
+
+> 可能输出如下:
+  ```
+Delta-set saved to delta.txt
+Partial delta-set saved to pdelta.txt
+Key saved to key.txt
+Key resolved: f8377f3596eca523568efca283f43737
+Time spent = 45ms
+Decryption started with 20 threads...
+Last 20 * 2^24 parallel decryption time spent = 4.510s
+
+(...)
+
+Last 20 * 2^24 parallel decryption time spent = 4.395s
+Key group 4 / 4 deciphered, time elapsed = 121.682s
+Decipher complete, time elapsed = 121.682s
+Result key: f8377f3596eca523568efca283f43737
+f8377f3596eca523568efca283f43737
+  ```
+
+> 输出的三个密钥应当一致；并行线程数和耗时或因CPU参数、特定密文集等而异。  
+
 
 # 展望
 
@@ -170,7 +190,7 @@ This project is a **C++ implementation of a 4-round AES-128 integral attack** (a
 
 # Key Achievements  
 
-- Implemented Δ-set and Δ'-set attacks in **Modern C++**, balancing **efficiency** and **readability**, with extensible interfaces for further research.  
+- Implemented Δ-set and Δ'-set attacks in **Modern C++**, balancing efficiency and readability with extensible interfaces for further research.  
 - **Test Setup**:  
   - CPU: 13th Gen Intel i7-13700H (14 cores, 20 threads)  
   - Platform: WSL-Ubuntu 24.04  
@@ -209,7 +229,7 @@ One of the few **Δ'-set-capable**, **modern C++** implementations of AES integr
 3. **Ranges & Algorithms**: `std::views::iota`, range-`for`, and pipeline operators (`|`) for safe, readable loops.  
 4. **Templated AES**: `template<size_t Rounds>` for compile-time flexibility.  
 5. **Custom `byte` Type**: Lightweight `struct` with `explicit` conversions and overloaded operators.  
-6. **I/O Flexibility**: Stream operators, `std::formatter` specialization, and hex/binary converters (`block_fromhex`).  
+6. **I/O Flexibility**: Stream operators, `std::formatter` specialization, re-useable hex/binary converters (`block_fromhex`).  
 7. **Memory Safety**: `std::span`/`std::string_view` for bounds-checked data passing.  
 8. **Coroutines**: Lazy key-generation via `co_yield` to reduce overhead.  
 
@@ -283,6 +303,27 @@ NOTE: The delta-set and partial delta-set, when generated simotaneously, are gua
 ```sh
 ./gencp -a && ./aes4-1 -i delta.txt && ./aes4-2 -i pdelta.txt --echo 3 && cat ./key.txt  
 ```  
+
+> Possible output:
+  ```
+Delta-set saved to delta.txt
+Partial delta-set saved to pdelta.txt
+Key saved to key.txt
+Key resolved: f8377f3596eca523568efca283f43737
+Time spent = 45ms
+Decryption started with 20 threads...
+Last 20 * 2^24 parallel decryption time spent = 4.510s
+
+(...)
+
+Last 20 * 2^24 parallel decryption time spent = 4.395s
+Key group 4 / 4 deciphered, time elapsed = 121.682s
+Decipher complete, time elapsed = 121.682s
+Result key: f8377f3596eca523568efca283f43737
+f8377f3596eca523568efca283f43737
+  ```
+
+> Among which, three printed keys shall be identical, while decryption thread count and time usage varies upon CPU properties and performance, particular ciphertext, etc. 
 
 # Future Work  
 1. Optimize inter-thread communication.  

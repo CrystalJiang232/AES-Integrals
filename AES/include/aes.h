@@ -12,7 +12,7 @@
 #include <vector>
 #endif
 
-#ifdef __MSC_VER__
+#ifdef __MSC_VER
 #pragma warning(disable:4244)
 #endif
 
@@ -225,11 +225,6 @@ public:
 
         add_round_key(state, 0);
         return state;
-    }
-
-    constexpr block output_rk4() const noexcept
-    {
-        return rnd_keys[4];
     }
 
 private:

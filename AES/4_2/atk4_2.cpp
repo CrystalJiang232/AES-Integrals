@@ -1,6 +1,6 @@
 #include "atk4_2.h"
 #include "timer.h"
-
+#include <iostream>
 namespace atk4_2
 {
     void Attack::single_thread(cipher_group_rvw v,keyrng_t rng,size_t idx)

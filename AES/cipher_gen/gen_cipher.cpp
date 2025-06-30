@@ -1,6 +1,7 @@
 #include "gen_cipher.h"
 #include "phase.h"
-
+#include <fstream>
+#include <iostream>
 const char* hint = 
                 "Usage: -a [-q]\n"
                 "       -d -p -k [-q]\n"

@@ -2,6 +2,7 @@
 #include "atkinterface.h"
 #include "config.h"
 #include <thread>
+#include <fstream>
 
 namespace atk4_2
 {
@@ -198,8 +199,6 @@ namespace atk4_2
         static inline EncKey result_key;
         const config cfg;
 	};
-	
-    void atk4_2();
 }
 
 template<>
