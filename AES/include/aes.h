@@ -12,7 +12,7 @@
 #include <vector>
 #endif
 
-#ifdef __MSC_VER
+#ifdef _MSC_VER
 #pragma warning(disable:4244)
 #endif
 

@@ -208,11 +208,6 @@ namespace atk4_1
             }
         }
 
-        if(iterflag != 1 || sumflag != 15)
-        {
-            return false;
-        }
-
-        return true;
+        return iterflag == 1 && sumflag == 15;
     }
 }

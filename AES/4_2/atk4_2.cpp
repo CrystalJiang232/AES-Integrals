@@ -1,6 +1,11 @@
 #include "atk4_2.h"
 #include "timer.h"
 #include <iostream>
+
+#ifdef _MSC_VER
+#pragma warning(disable:4267)
+#endif
+
 namespace atk4_2
 {
     void Attack::single_thread(cipher_group_rvw v,keyrng_t rng,size_t idx)
