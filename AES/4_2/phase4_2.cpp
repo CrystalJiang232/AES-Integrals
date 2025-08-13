@@ -29,12 +29,12 @@ const char* full =
 std::expected<config, int> parse_configurate(int argc, char** argv)
 {
 	ArgParser ap{
-		{"h",true}, //help
-		{"i",false}, //inputfile
-		{"o",false}, //outputfile
-		{"nothread",true}, //whether to disable multithreading
-		{"count",false}, //maximum ciphertext count
-		{"echo",false} //extent of echoing messages to the terminal
+		{"h",ArgType::Flag}, //help
+		{"i",ArgType::String}, //inputfile
+		{"o",ArgType::String}, //outputfile
+		{"nothread",ArgType::Flag}, //whether to disable multithreading
+		{"count",ArgType::Numeric}, //maximum ciphertext count
+		{"echo",ArgType::Numeric} //extent of echoing messages to the terminal
 	};
 
 	config cfg;
@@ -46,7 +46,7 @@ std::expected<config, int> parse_configurate(int argc, char** argv)
 		return std::unexpected(1);
 	}
 
-	if (ap.getFlag("h"))
+	if (ap.get<bool>("h").value_or(false)) //Defaults to false(???)
 	{
 		//help
 		help();
@@ -54,78 +54,39 @@ std::expected<config, int> parse_configurate(int argc, char** argv)
 	}
 	//input file logic
 
-	switch (ap.getFlag("i") + (ap.getFlag("it") << 1) + (ap.getFlag("ib") << 2))
+	if(auto val = ap.get<std::string>("i");val)
 	{
-	case 1:
-		cfg.inputname = ap.getValue("i");
-		cfg.input = config::io_t::hextest;
-		break;
-	case 2:
-		cfg.inputname = ap.getValue("it");
-		cfg.input = config::io_t::hextest;
-		break;
-	case 4:
-		cfg.inputname = ap.getValue("ib");
-		cfg.input = config::io_t::binary;
-		break;
-	default:
-		//Invalid specifier: input can be given once and once only
-		usage();
-		return std::unexpected(1);
-	}
-
-	//output file logic
-
-	switch (ap.getFlag("o") + (ap.getFlag("ot") << 1) + (ap.getFlag("ob") << 2))
-	{
-	case 0:
-		break;
-	case 1:
-		cfg.outputname = ap.getValue("o");
-		cfg.output = config::io_t::hextest;
-		break;
-	case 2:
-		cfg.outputname = ap.getValue("ot");
-		cfg.output = config::io_t::hextest;
-		break;
-	case 4:
-		cfg.outputname = ap.getValue("ob");
-		cfg.output = config::io_t::binary;
-		break;
-	default:
-		//Invalid specifier: output can be given no more than once
-		usage();
-		return std::unexpected(1);
-	}
-
-	if (ap.getFlag("count"))
-	{
-		std::string temp(ap.getValue("count"));
-		if (auto [x, y] = std::from_chars(temp.data(), temp.data() + temp.length(), cfg.count);y != std::errc{})
-		{
-			//Invalid numeric string for `count`
-			usage();
-			return std::unexpected(1);
-		}
+		cfg.inputname = *val;
 	}
 	else
+	{
+		return std::unexpected(1);
+	}
+	//output file logic
+
+	if(auto val = ap.get<std::string>("o");val)
+	{
+		cfg.outputname = *val;
+	}
+	else
+	{
+		//return std::unexpected(1);
+	}
+
+	if (auto val = ap.get<int>("count");val)
+	{
+		cfg.count = *val;
+	}
+	else //Default
 	{
 		cfg.count = 66;
 	}
 
-	cfg.threading = !ap.getFlag("nothread");
+	cfg.threading = !ap.get<bool>("nothread").value_or(false);
 
-	if (ap.getFlag("echo"))
+	if (auto val = ap.get<int>("echo");val)
 	{
-		std::string temp(ap.getValue("echo"));
-		int op{ -2 };
-		if (auto [x, y] = std::from_chars(temp.data(), temp.data() + temp.length(), op);y != std::errc{} || op < 0 || op > 3)
-		{
-			//Invalid numeric string for `echo`
-			usage();
-			return std::unexpected(1);
-		}
-		cfg.ech = config::echo(op);
+		cfg.ech = config::echo(*val);
 	}
 	return cfg;
 

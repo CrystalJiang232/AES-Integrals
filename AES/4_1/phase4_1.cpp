@@ -7,7 +7,7 @@ const char* full = hint;
 
 std::expected<config,int> parse_configurate(int argc, char** argv)
 {
-    ArgParser ap{{"i",false}};
+    ArgParser ap{{"i",ArgType::String},{"h",ArgType::Flag}};
     config cfg;
 
     if(!ap.parse(argc,argv))
@@ -16,15 +16,15 @@ std::expected<config,int> parse_configurate(int argc, char** argv)
         return std::unexpected(1);
     }
 
-    if(ap.getFlag("h"))
+    if(ap.get<bool>("h").value_or(false))
     {
         help();
         return std::unexpected(0);
     }
 
-    if(ap.getFlag("i"))
+    if(auto val = ap.get<std::string>("i");val)
     {
-        cfg.inputname = ap.getValue("i");
+        cfg.inputname = *val;
     }
     else
     {

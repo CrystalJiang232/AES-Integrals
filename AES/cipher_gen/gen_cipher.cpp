@@ -66,26 +66,27 @@ static void pkey(block key,std::string_view filename)
 int main(int argc,char** argv)
 {
     ArgParser ap{
-        {"a",true},
-        {"d",true},
-        {"p",true},
-        {"k",true},
-        {"q",true}
+        {"a",ArgType::Flag},
+        {"d",ArgType::Flag},
+        {"p",ArgType::Flag},
+        {"k",ArgType::Flag},
+        {"q",ArgType::Flag}
     };
 
     if(!ap.parse(argc,argv))
     {
+        usage();
         exit(1);
     }
 
-    if(ap.getFlag("h"))
+    if(ap.get<bool>("h").value_or(false))
     {
         help();
         return 0;
     }
 
-    auto flagv = ((ap.getFlag("d") << 2) + (ap.getFlag("p") << 1) + (ap.getFlag("k"))) | (ap.getFlag("a") * 0x07);
-    bool silent = ap.getFlag("q");
+    auto flagv = ((ap.get<bool>("d").value_or(false) << 2) + (ap.get<bool>("p").value_or(false) << 1) + (ap.get<bool>("k").value_or(false))) | (ap.get<bool>("a").value_or(false) * 0x07);
+    bool silent = ap.get<bool>("q").value_or(false);
 
     auto trykey = randblock();
     if(!flagv)
